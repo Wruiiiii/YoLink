@@ -1,11 +1,3 @@
-//
-//  MainTabView.swift
-//  YoLink
-//
-//  Main app shell after login. TabView with 5 tabs and custom floating center FAB per Figma.
-//  Tabs: Group, 1:1 Connect, (Center FAB), Calendar, Profile
-//
-
 import SwiftUI
 
 struct MainTabView: View {

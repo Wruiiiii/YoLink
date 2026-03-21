@@ -27,6 +27,12 @@ struct CreateGroupEventView: View {
         center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
+    // Location search
+    @State private var searchResults: [MKMapItem] = []
+    @State private var isSearching: Bool = false
+    @State private var selectedMapItem: IdentifiableMapItem? = nil
+    @State private var searchTask: Task<Void, Never>? = nil
+    
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedCoverImage: Image?
     
@@ -88,22 +94,75 @@ struct CreateGroupEventView: View {
                             .padding(.bottom,5)
                             .padding(.horizontal, 20)
                         
+//                        VStack(spacing: 12) {
+//                            HStack(spacing: 8) {
+//                                Image(systemName: "mappin.and.ellipse")
+//                                    .foregroundColor(Color("Theme"))
+//                                TextField("Search for a location", text: $locationText)
+//                                    .font(.system(size: 15))
+//                                Button("Search") {
+//                                    // TODO: hook up search
+//                                    print("Search location: \\(locationText)")
+//                                }
+//                                .font(.system(size: 13, weight: .semibold))
+//                                .padding(.horizontal, 10)
+//                                .padding(.vertical, 8)
+//                                .background(Color("Theme").opacity(0.1))
+//                                .foregroundColor(Color("Theme"))
+//                                .clipShape(Capsule())
+//                            }
+//                            .padding(.horizontal, 14)
+//                            .padding(.vertical, 12)
+//                            .frame(width: Constants.formFrameWidth, height: Constants.formFrameHeight)
+//                            .background(
+//                                RoundedRectangle(cornerRadius: 24)
+//                                    .stroke(Color(hex: "E0E0E0"), lineWidth: 1)
+//                                    .background(
+//                                        RoundedRectangle(cornerRadius: 24)
+//                                            .fill(Color(.systemBackground))
+//                                    )
+//                            )
+//                            .frame(maxWidth: .infinity)
+//                            
+//                            Map(coordinateRegion: $region)
+//                                .frame(width: Constants.formFrameWidth, height: 200)
+//                                .clipShape(RoundedRectangle(cornerRadius: 28))
+//                                .frame(maxWidth: .infinity)
+//                        }
                         VStack(spacing: 12) {
+                            // Search bar
                             HStack(spacing: 8) {
                                 Image(systemName: "mappin.and.ellipse")
                                     .foregroundColor(Color("Theme"))
                                 TextField("Search for a location", text: $locationText)
                                     .font(.system(size: 15))
-                                Button("Search") {
-                                    // TODO: hook up search
-                                    print("Search location: \\(locationText)")
+                                    .onChange(of: locationText) { newValue in
+                                        searchTask?.cancel()
+                                        if newValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                                            searchResults = []
+                                            isSearching = false
+                                            return
+                                        }
+                                        isSearching = true
+                                        searchTask = Task {
+                                            try? await Task.sleep(nanoseconds: 400_000_000) // 0.4s debounce
+                                            guard !Task.isCancelled else { return }
+                                            await performLocationSearch(query: newValue)
+                                        }
+                                    }
+                                if isSearching {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else if !locationText.isEmpty {
+                                    Button {
+                                        locationText = ""
+                                        searchResults = []
+                                        selectedMapItem = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(Color(hex: "8E8E93"))
+                                    }
                                 }
-                                .font(.system(size: 13, weight: .semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(Color("Theme").opacity(0.1))
-                                .foregroundColor(Color("Theme"))
-                                .clipShape(Capsule())
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
@@ -117,11 +176,60 @@ struct CreateGroupEventView: View {
                                     )
                             )
                             .frame(maxWidth: .infinity)
-                            
-                            Map(coordinateRegion: $region)
-                                .frame(width: Constants.formFrameWidth, height: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 28))
+
+                            // Search results dropdown
+                            if !searchResults.isEmpty {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    ForEach(searchResults, id: \.self) { item in
+                                        Button {
+                                            selectLocation(item)
+                                        } label: {
+                                            HStack(spacing: 12) {
+                                                Image(systemName: "mappin.circle.fill")
+                                                    .foregroundColor(Color("Theme"))
+                                                    .font(.system(size: 20))
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(item.name ?? "Unknown")
+                                                        .font(.system(size: 14, weight: .semibold))
+                                                        .foregroundColor(Color(hex: "1A1A1A"))
+                                                    if let address = formattedAddress(from: item.placemark) {
+                                                        Text(address)
+                                                            .font(.system(size: 12))
+                                                            .foregroundColor(Color(hex: "8E8E93"))
+                                                            .lineLimit(1)
+                                                    }
+                                                }
+                                                Spacer()
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 12)
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        if item != searchResults.last {
+                                            Divider()
+                                                .padding(.leading, 48)
+                                        }
+                                    }
+                                }
+                                .frame(width: Constants.formFrameWidth)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 4)
+                                )
                                 .frame(maxWidth: .infinity)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: searchResults.count)
+                            }
+
+                            // Map
+                            Map(coordinateRegion: $region, annotationItems: selectedMapItem.map { [$0] } ?? []) { item in
+                                MapMarker(coordinate: item.mapItem.placemark.coordinate, tint: Color("Theme"))
+                            }
+                            .frame(width: Constants.formFrameWidth, height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 28))
+                            .frame(maxWidth: .infinity)
                         }
                         
                         // Description (second screenshot)
@@ -358,7 +466,51 @@ struct CreateGroupEventView: View {
     }
     
     // MARK: - Helpers
-    
+    // MARK: - Location Search
+    private func performLocationSearch(query: String) async {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = .pointOfInterest
+
+        do {
+            let search = MKLocalSearch(request: request)
+            let response = try await search.start()
+            await MainActor.run {
+                searchResults = Array(response.mapItems.prefix(5))
+                isSearching = false
+            }
+        } catch {
+            await MainActor.run {
+                searchResults = []
+                isSearching = false
+            }
+        }
+    }
+
+    private func selectLocation(_ item: MKMapItem) {
+        selectedMapItem = IdentifiableMapItem(mapItem: item)  // ← wrap here
+        locationText = item.name ?? ""
+        searchResults = []
+        isSearching = false
+
+        let coordinate = item.placemark.coordinate
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            region = MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+    }
+
+    private func formattedAddress(from placemark: CLPlacemark) -> String? {
+        let parts = [
+            placemark.thoroughfare,
+            placemark.locality,
+            placemark.administrativeArea,
+            placemark.country
+        ].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
     private var categoryChips: some View {
         let categories = ["Social", "Workshop", "Tech", "Networking", "Outdoors", "Creative"]
         
@@ -500,3 +652,7 @@ struct CreateGroupEventView: View {
         static let participantNumberSpacing: CGFloat = 12
     }
 
+    struct IdentifiableMapItem: Identifiable {
+        let id = UUID()
+        let mapItem: MKMapItem
+    }
