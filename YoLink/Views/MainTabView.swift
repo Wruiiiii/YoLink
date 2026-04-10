@@ -4,6 +4,10 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .group
     @State private var showCreateEventSheet = false
     @State private var showCreateGroupEvent = false
+    @State private var events: [EventItem] = [
+        EventItem(name: "Tech Founders & VC Mixer: Downtown Hub", location: "Skyline Lounge, Austin TX", date: Date()),
+        EventItem(name: "Creative Minds: Design Meetup", location: "WeWork Downtown, Austin TX", date: Date())
+    ]
     
     enum Tab: Int, CaseIterable {
         case group = 0
@@ -17,7 +21,7 @@ struct MainTabView: View {
         ZStack {
             // MARK: - TabView (Bottom Layer)
             TabView(selection: $selectedTab) {
-                HomeView()
+                HomeView(events: $events)
                     .tag(Tab.group.rawValue)
                     .tabItem {
                         Label("Group", systemImage: "person.3")
@@ -42,7 +46,7 @@ struct MainTabView: View {
                         Label("Calendar", systemImage: "calendar")
                     }
                 
-                PlaceholderTabView(title: "Profile", icon: "person.fill")
+                ProfileView()
                     .tag(Tab.profile.rawValue)
                     .tabItem {
                         Label("Profile", systemImage: "person.fill")
@@ -90,7 +94,7 @@ struct MainTabView: View {
         }
         .fullScreenCover(isPresented: $showCreateGroupEvent) {
             NavigationStack {
-                CreateGroupEventView()
+                CreateGroupEventView(events: $events)
             }
         }
     }
