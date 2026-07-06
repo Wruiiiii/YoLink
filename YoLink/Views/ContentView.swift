@@ -1,26 +1,18 @@
-//
-//  ContentView.swift
-//  YoLink
-//
-//  Created by Rae Wang on 3/12/26.
-//
 
 import SwiftUI
 
 struct ContentView: View {
-    @State private var authViewModel = AuthViewModel()
-    
+
+    @EnvironmentObject var session: AppSessionViewModel
+
     var body: some View {
         Group {
-            if authViewModel.showMainTabView {
+            if session.isLoggedIn {
                 MainTabView()
             } else {
-                LoginView(viewModel: authViewModel)
+                AuthFlowView()
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: session.isLoggedIn)
     }
-}
-
-#Preview {
-    ContentView()
 }

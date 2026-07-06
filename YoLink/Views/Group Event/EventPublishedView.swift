@@ -16,31 +16,28 @@ struct EventPublishedView: View {
             ScrollView {
                 VStack(spacing: 0) {
 
-                    // ── Checkmark icon ──
                     ZStack {
                         Circle()
-                            .fill(Color(hex: "E8EAFF"))
+                            .fill(Color(hex: "FEF5D2"))
                             .frame(width: 80, height: 80)
                         Image(systemName: "checkmark")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(Color(hex: "FECD70"))
+                            .foregroundColor(Color(hex: "FFA700"))
                     }
                     .padding(.top, 60)
                     .padding(.bottom, 20)
 
-                    // ── Title ──
                     Text("Event Published!")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(Color(hex: "1A1A1A"))
                         .padding(.bottom, 12)
 
-                    // ── Subtitle ──
                     Text("Great job! Your professional networking\nevent is now live and ready for attendees to\njoin.")
                         .font(.system(size: 16))
                         .foregroundColor(Color(hex: "8E8E93"))
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, 28)
                         .padding(.bottom, 36)
 
                     // ── Preview card ──
@@ -77,10 +74,10 @@ struct EventPublishedView: View {
                             // "UPCOMING" badge
                             Text("UPCOMING")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(Color(hex: "FECD70"))
+                                .foregroundColor(Color(hex: "FFCB00"))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(Color(hex: "E8EAFF"))
+                                .background(Color(hex: "F6F7F8"))
                                 .clipShape(Capsule())
 
                             // Event name
@@ -132,7 +129,7 @@ struct EventPublishedView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(Color(hex: "FECD70"))
+                            .background(Color(hex: "FFD636"))
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     .padding(.horizontal, 24)
@@ -146,10 +143,10 @@ struct EventPublishedView: View {
                             Text("Share to Network")
                                 .font(.system(size: 17, weight: .semibold))
                         }
-                        .foregroundColor(Color(hex: "FECD70"))
+                        .foregroundColor(Color(hex: "FFD636"))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(Color(hex: "E8EAFF"))
+                        .background(Color(hex: "F0F0EF"))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     .padding(.horizontal, 24)
@@ -159,7 +156,7 @@ struct EventPublishedView: View {
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.system(size: 15))
-                            .foregroundColor(Color(hex: "8E8E93"))
+                            .foregroundColor(Color.black)
                     }
                     .padding(.bottom, 40)
                 }

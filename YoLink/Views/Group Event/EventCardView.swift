@@ -1,122 +1,128 @@
-
 import SwiftUI
 
-struct EventCardView: View {
-    let title: String
-    let subtitle: String?
-    let location: String
-    let imageName: String?
-    let coverImage: Image?
-    let onJoinTap: () -> Void
-    
-    init(
-        title: String,
-        subtitle: String? = nil,
-        location: String,
-        imageName: String? = nil,
-        coverImage: Image? = nil,
-        onJoinTap: @escaping () -> Void = {}
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.location = location
-        self.imageName = imageName
-        self.coverImage = coverImage
-        self.onJoinTap = onJoinTap
-    }
-    
+
+struct GridEventCardView: View {
+
+    let title:      String
+    let hostedBy:   String
+    let location:   String
+    let imageName:  String?     // asset catalog name e.g. "CardBG1"
+    let coverImage: Image?      // user photo from PhotosPicker
+
+    private let cardWidth:   CGFloat = 201
+    private let cardHeight:  CGFloat = 340
+    private let imageHeight: CGFloat = 220
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image section (Figma: card total 383×348pt)
+
+            // ── Cover image ──────────────────────────────────
             ZStack {
                 if let cover = coverImage {
-                    // User-uploaded photo from PhotosPicker
                     cover
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else if let name = imageName {
-                    // Asset catalog image by name
+                        .scaledToFill()
+                        .frame(width: cardWidth, height: imageHeight)
+                        .clipped()
+                } else if let name = imageName, !name.isEmpty {
                     Image(name)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .scaledToFill()
+                        .frame(width: cardWidth, height: imageHeight)
+                        .clipped()
                 } else {
-                    // Default fallback background
-                    Image("CardBG1")
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    Rectangle()
+                        .fill(Color(hex: "D0D5F5"))
+                        .frame(width: cardWidth, height: imageHeight)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.system(size: 32))
+                                .foregroundColor(.white.opacity(0.6))
+                        )
                 }
             }
-            .frame(width: 383, height: 197)
-            .clipped()
-            
-            // Content section (348 - 197 = 151pt)
+            .frame(width: cardWidth, height: imageHeight)
+
+            // ── Text content ─────────────────────────────────
             VStack(alignment: .leading, spacing: 8) {
-                // Event title (20pt bold)
-                VStack(alignment: .leading, spacing: 2) {
-                    if let sub = subtitle {
-                        Text(sub + ":")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(Color(hex: "1A1A1A"))
-                            .tracking(-0.23)
+
+                // Title — Figma: width 187, height 52
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(hex: "1A1A1A"))
+                    .frame(width: 187, height: 52, alignment: .topLeading)
+                    .lineLimit(3)
+
+                // Host row
+                if !hostedBy.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "3A3A3A"))
+                        Text("Hosted by \(hostedBy)")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "3A3A3A"))
+                            .lineLimit(1)
                     }
-                    Text(title)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(Color(hex: "1A1A1A"))
-                        .tracking(-0.23)
                 }
-                
-                // Location (15pt, gray) with map pin icon
-                HStack(spacing: 8) {
-                    Image(systemName: "mappin")
-                        .font(.system(size: 18))
-                        .foregroundColor(.black)
-                    Text(location)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(Color(hex: "727272"))
-                        .tracking(-0.25)
-                }
-                
-                // Join Event button (Figma: 106×36, pill, Theme color)
-                HStack {
-                    Spacer()
-                    Button(action: onJoinTap) {
-                        Text("Join Event")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
-                            .tracking(-0.23)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                    }
-                    .background(Color("Theme"))
-                    .clipShape(Capsule())
-                    .frame(height: 36)
+
+                // Location row
+                HStack(spacing: 6) {
+                    Image(systemName: "paperplane")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "3A3A3A"))
+                    Text(location.isEmpty ? "Location TBD" : location)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "3A3A3A"))
+                        .lineLimit(1)
                 }
             }
-            .padding(24)
+            .padding(.horizontal, (cardWidth - 187) / 2)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
         }
-        .frame(width: 383, height: 348)
+        .frame(width: cardWidth, height: cardHeight)
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.25), radius: 3, x: 2, y: 2)
+        .cornerRadius(10)
+//        .overlay(
+//            RoundedRectangle(cornerRadius:10)
+//                .stroke(Color(hex:"FFF1B7"),lineWidth:1)
+//        )
+        //.shadow(color: .black.opacity(0.25),radius: 1, x: 1, y: 1)
     }
 }
+
+// MARK: - Color helper
 
 private extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: UInt64
-        (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
+        let r = Double((int >> 16) & 0xFF) / 255
+        let g = Double((int >> 8)  & 0xFF) / 255
+        let b = Double(int         & 0xFF) / 255
+        self.init(.sRGB, red: r, green: g, blue: b)
     }
 }
 
 #Preview {
-    EventCardView(
-        title: "Downtown Hub",
-        subtitle: "Tech Founders & VC Mixer",
-        location: "Skyline Lounge, Austin TX"
-    )
+    HStack(spacing: 12) {
+        GridEventCardView(
+            title:      "Google - AI Driven Research Workshop",
+            hostedBy:   "Adnan K.",
+            location:   "Skyline Lounge, Austin TX",
+            imageName:  "CardBG1",
+            coverImage: nil
+        )
+        GridEventCardView(
+            title:      "Goldman - Investment In Digital Asset",
+            hostedBy:   "Richard Galvin",
+            location:   "200 West St, New York, NY",
+            imageName:  "CardBG2",
+            coverImage: nil
+        )
+    }
     .padding()
+    .background(Color.white)
 }

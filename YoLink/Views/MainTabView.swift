@@ -4,48 +4,40 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .group
     @State private var showCreateEventSheet = false
     @State private var showCreateGroupEvent = false
-    @State private var events: [EventItem] = [
-        EventItem(name: "Tech Founders & VC Mixer: Downtown Hub", location: "Skyline Lounge, Austin TX", date: Date()),
-        EventItem(name: "Creative Minds: Design Meetup", location: "WeWork Downtown, Austin TX", date: Date())
-    ]
-    
+    @State private var events: [EventItem] = []
+
     enum Tab: Int, CaseIterable {
-        case group = 0
-        case connect = 1
-        case create = 2   // Center FAB (blank tab)
-        case calendar = 3
-        case profile = 4
+        case group    = 0
+        case connect  = 1
+        case calendar = 2
+        case profile  = 3
     }
-    
+
     var body: some View {
         ZStack {
-            // MARK: - TabView (Bottom Layer)
+
+            // MARK: - TabView
             TabView(selection: $selectedTab) {
+
                 HomeView(events: $events)
                     .tag(Tab.group.rawValue)
                     .tabItem {
                         Label("Group", systemImage: "person.3")
                     }
-                
+
                 PlaceholderTabView(title: "1:1 Connect", icon: "hand.wave")
                     .tag(Tab.connect.rawValue)
                     .tabItem {
                         Label("1:1 Connect", systemImage: "hand.wave")
                     }
-                
-                // Hidden/blank tab for center FAB space
-//                Color.clear
-//                    .tag(Tab.create.rawValue)
-//                    .tabItem {
-//                        Label(" ", systemImage: "circle")
-//                    }
-                
-                PlaceholderTabView(title: "Calendar", icon: "calendar")
+
+                // ← CalendarView now wired here
+                CalendarView()
                     .tag(Tab.calendar.rawValue)
                     .tabItem {
                         Label("Calendar", systemImage: "calendar")
                     }
-                
+
                 ProfileView()
                     .tag(Tab.profile.rawValue)
                     .tabItem {
@@ -53,26 +45,20 @@ struct MainTabView: View {
                     }
             }
             .tint(Color("Theme"))
-            
-            // MARK: - Custom Center FAB (Top Layer)
+
+            // MARK: - Center FAB
             VStack {
                 Spacer()
-                
                 Button {
                     showCreateEventSheet = true
                 } label: {
                     ZStack {
-                        // Outer halo effect (semi-transparent purple)
                         Circle()
                             .fill(Color("Theme").opacity(0.25))
                             .frame(width: 70, height: 70)
-                        
-                        // Primary solid purple circle
                         Circle()
                             .fill(Color("Theme"))
                             .frame(width: 58, height: 58)
-                        
-                        // Plus icon
                         Image(systemName: "plus")
                             .font(.system(size: 30, weight: .bold))
                             .foregroundColor(.white)
@@ -85,12 +71,11 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showCreateEventSheet) {
             CreateActionSheetView {
-                // Dismiss sheet and present full-screen Create Group Event page
                 showCreateEventSheet = false
                 showCreateGroupEvent = true
             }
-                .presentationDetents([.height(476), .medium])
-                .presentationDragIndicator(.visible)
+            .presentationDetents([.height(476), .medium])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showCreateGroupEvent) {
             NavigationStack {
@@ -100,12 +85,12 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Placeholder for tabs not yet implemented
+// MARK: - Placeholder tabs
 
 private struct PlaceholderTabView: View {
     let title: String
     let icon: String
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {

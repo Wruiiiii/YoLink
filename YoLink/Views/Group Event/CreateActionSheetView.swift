@@ -22,7 +22,7 @@ private enum SheetDesign {
     static let buttonCornerRadius: CGFloat = 1000
     static let buttonFontSize: CGFloat = 18
     static let primaryIconSize: CGFloat = 18
-    static let secondaryButtonFill = Color(hex: "EFF1FF")
+    static let secondaryButtonFill = Color(hex: "FFFFFF")
 }
 
 struct CreateActionSheetView: View {
@@ -77,9 +77,9 @@ struct CreateActionSheetView: View {
             
             Spacer(minLength: 0)
             
-            Text("New Connection")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Color(hex: "1A1A1A"))
+            Text("Create New Event")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(Color(hex: "232253"))
                 .tracking(-0.45)
             
             Spacer(minLength: 0)
@@ -99,7 +99,7 @@ struct CreateActionSheetView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("What would you like to create?")
                 .font(.system(size: SheetDesign.titleFontSize, weight: .bold))
-                .foregroundColor(Color(hex: "1A1A1A"))
+                .foregroundColor(Color(hex: "232253"))
                 .tracking(SheetDesign.titleTracking)
             
             Text("Start a new event or meetup in your current city")
@@ -129,7 +129,7 @@ struct CreateActionSheetView: View {
                 Spacer(minLength: 0)
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .regular))
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.white.opacity(0.85))
             }
             .padding(.horizontal, SheetDesign.buttonHorizontalPadding)
@@ -158,12 +158,12 @@ struct CreateActionSheetView: View {
                 
                 Text("Request 1:1 Meetup")
                     .font(.system(size: SheetDesign.buttonFontSize, weight: .semibold))
-                    .foregroundColor(Color("Theme"))
+                    .foregroundColor(Color(hex:"ffd636"))
                 
                 Spacer(minLength: 0)
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .regular))
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(Color("Theme"))
             }
             .padding(.horizontal, SheetDesign.buttonHorizontalPadding)
@@ -174,7 +174,7 @@ struct CreateActionSheetView: View {
                     .fill(SheetDesign.secondaryButtonFill)
                     .overlay(
                         Capsule()
-                            .stroke(Color("Theme").opacity(0.3), lineWidth: 1)
+                            .stroke(Color("Theme").opacity(0.5), lineWidth: 1)
                     )
                     .shadow(color: .black.opacity(SheetDesign.shadowOpacity), radius: SheetDesign.shadowRadius, x: 0, y: SheetDesign.shadowY)
             )

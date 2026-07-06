@@ -29,9 +29,44 @@
 		214458062F639D4400941D23 /* YoLinkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YoLinkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2113CBBE2F885913002C8B8E /* Exceptions for "YoLink" folder in "YoLink" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 214457EE2F639D4200941D23 /* YoLink */;
+		};
+		2113CBC92F8BE0EE002C8B8E /* Exceptions for "YoLink" folder in "YoLinkTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Alice-Regular.ttf",
+				"Baloo-Regular.ttf",
+				Localizable.xcstrings,
+				Views/CalendarView.swift,
+			);
+			target = 214457FB2F639D4400941D23 /* YoLinkTests */;
+		};
+		2113CBCA2F8BE0EE002C8B8E /* Exceptions for "YoLink" folder in "YoLinkUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Alice-Regular.ttf",
+				"Baloo-Regular.ttf",
+				Localizable.xcstrings,
+				Views/CalendarView.swift,
+			);
+			target = 214458052F639D4400941D23 /* YoLinkUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		214457F12F639D4200941D23 /* YoLink */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2113CBBE2F885913002C8B8E /* Exceptions for "YoLink" folder in "YoLink" target */,
+				2113CBC92F8BE0EE002C8B8E /* Exceptions for "YoLink" folder in "YoLinkTests" target */,
+				2113CBCA2F8BE0EE002C8B8E /* Exceptions for "YoLink" folder in "YoLinkUITests" target */,
+			);
 			path = YoLink;
 			sourceTree = "<group>";
 		};
@@ -187,10 +222,11 @@
 				};
 			};
 			buildConfigurationList = 214457EA2F639D4200941D23 /* Build configuration list for PBXProject "YoLink" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = 214457E62F639D4200941D23;
@@ -329,6 +365,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -386,6 +423,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -400,6 +438,7 @@
 				DEVELOPMENT_TEAM = PWLBFCSU3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = YoLink/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "   Used to find nearby locations for your event";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -433,6 +472,7 @@
 				DEVELOPMENT_TEAM = PWLBFCSU3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = YoLink/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "   Used to find nearby locations for your event";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
