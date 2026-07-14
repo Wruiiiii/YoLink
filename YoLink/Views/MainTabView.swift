@@ -22,26 +22,26 @@ struct MainTabView: View {
                 HomeView(events: $events)
                     .tag(Tab.group.rawValue)
                     .tabItem {
-                        Label("Group", systemImage: "person.3")
+                        Label("活动", systemImage: "person.3")
                     }
 
-                PlaceholderTabView(title: "1:1 Connect", icon: "hand.wave")
+                SocialView()
                     .tag(Tab.connect.rawValue)
                     .tabItem {
-                        Label("1:1 Connect", systemImage: "hand.wave")
+                        Label("社交", systemImage: "person.2.fill")
                     }
 
                 // ← CalendarView now wired here
                 CalendarView()
                     .tag(Tab.calendar.rawValue)
                     .tabItem {
-                        Label("Calendar", systemImage: "calendar")
+                        Label("日程", systemImage: "calendar")
                     }
 
                 ProfileView()
                     .tag(Tab.profile.rawValue)
                     .tabItem {
-                        Label("Profile", systemImage: "person.fill")
+                        Label("我的", systemImage: "person.fill")
                     }
             }
             .tint(Color("Theme"))

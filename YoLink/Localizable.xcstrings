@@ -7,18 +7,35 @@
     "\"" : {
 
     },
+    "%@，%@，%@，%@ 位关注者" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@，%2$@，%3$@，%4$@ 位关注者"
+          }
+        }
+      }
+    },
     "%lld" : {
+
+    },
+    "%lld 人已报名" : {
 
     },
     "••••••••" : {
 
     },
+    "↑  上滑 · 认识下一个人" : {
+
+    },
     "1:1 Connect" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1:1 交流"
+            "value" : "社交"
           }
         }
       }
@@ -74,6 +91,7 @@
       }
     },
     "Calendar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -224,6 +242,7 @@
       }
     },
     "Group" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -234,6 +253,7 @@
       }
     },
     "Group Events" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -330,6 +350,7 @@
       }
     },
     "Profile" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -349,6 +370,12 @@
         }
       }
     },
+    "R" : {
+
+    },
+    "Rae Wang" : {
+
+    },
     "Request 1:1 Meetup" : {
       "localizations" : {
         "zh-Hans" : {
@@ -360,6 +387,7 @@
       }
     },
     "Search events..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -529,6 +557,9 @@
         }
       }
     },
+    "YOLINK" : {
+
+    },
     "YoLink v1.0.0" : {
 
     },
@@ -542,25 +573,82 @@
         }
       }
     },
+    "上滑，认识下一个人" : {
+
+    },
+    "不止一面\n才是真实的你。" : {
+
+    },
+    "个人详情页待接入" : {
+
+    },
+    "信息" : {
+
+    },
+    "关注" : {
+
+    },
+    "关注 %@" : {
+
+    },
     "参与活动" : {
 
     },
     "嗨！" : {
 
     },
+    "展示真实的双面人格" : {
+
+    },
+    "库比提诺, CA" : {
+
+    },
+    "当前位置" : {
+
+    },
+    "我的" : {
+
+    },
     "我的主页" : {
 
     },
-    "数据统计" : {
+    "报名" : {
+
+    },
+    "按类别探索" : {
+
+    },
+    "搜索感兴趣的活动" : {
+
+    },
+    "日程" : {
 
     },
     "查看全部" : {
+
+    },
+    "查看社交页面信息" : {
+
+    },
+    "欢迎回来" : {
+
+    },
+    "活动" : {
+
+    },
+    "活动参与" : {
 
     },
     "点击或上滑翻转主页卡片" : {
 
     },
     "生活面" : {
+
+    },
+    "社交" : {
+
+    },
+    "筛选" : {
 
     },
     "职业面" : {

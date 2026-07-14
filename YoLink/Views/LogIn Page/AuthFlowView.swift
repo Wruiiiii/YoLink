@@ -17,7 +17,8 @@ struct AuthFlowView: View {
         NavigationStack {
             LoginView(
                 viewModel: authViewModel,
-                onSignUpTapped: { showSignUp = true }
+                onSignUpTapped: { showSignUp = true },
+                onLoginSucceeded: { session.isLoggedIn = true }
             )
             .navigationDestination(isPresented: $showSignUp) {
                 SignUpView()

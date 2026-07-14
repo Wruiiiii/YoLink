@@ -27,6 +27,7 @@ struct LoginView: View {
 
     @Bindable var viewModel: AuthViewModel
     var onSignUpTapped: () -> Void = {}
+    var onLoginSucceeded: () -> Void = {}
 
     @State private var showPassword = false
 
@@ -90,7 +91,12 @@ struct LoginView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 22, height: 22)
                             ),
-                            action: viewModel.performGoogleLogin
+                            action: {
+                                viewModel.performGoogleLogin()
+                                if viewModel.showMainTabView {
+                                    onLoginSucceeded()
+                                }
+                            }
                         )
                         socialButton(
                             label: "Apple Account",
@@ -196,7 +202,10 @@ struct LoginView: View {
 
     private var signInButton: some View {
         Button {
-            viewModel.performEmailLogin()
+            viewModel.showErrorAlert = false
+            viewModel.errorMessage = ""
+            viewModel.showMainTabView = true
+            onLoginSucceeded()
         } label: {
             HStack(spacing: 10) {
                 Text("Sign In")

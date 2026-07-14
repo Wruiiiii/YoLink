@@ -16,15 +16,13 @@ struct ProfileUser {
     var interests: [String] = ["骑行", "精品咖啡", "摄影", "旅行", "现代建筑", "阅读", "音乐", "手冲咖啡", "美食", "城市漫步"]
 }
 
-struct ProfileEvent: Identifiable {
-    let id = UUID()
+struct ProfileEvent {
     var title: String
     var dateLocation: String
     var imageName: String?
 }
 
-private struct WorkUpdate: Identifiable {
-    let id = UUID()
+private struct WorkUpdate {
     var title: String
     var meta: String
     var imageName: String?
@@ -33,8 +31,7 @@ private struct WorkUpdate: Identifiable {
     var shares: Int
 }
 
-private struct LifeMoment: Identifiable {
-    let id = UUID()
+private struct LifeMoment {
     var title: String
     var imageName: String?
     var systemImage: String
@@ -63,15 +60,15 @@ struct ProfileView: View {
     ]
 
     private let workUpdates: [WorkUpdate] = [
-        WorkUpdate(title: "正在重构核心数据看板，帮助团队更快做出产品决策。", meta: "2天前 · Meta-X", imageName: "Profile_R1", likes: 36, comments: 12, shares: 5),
-        WorkUpdate(title: "今天和产品团队完成了一场很棒的设计工作坊。", meta: "1周前 · Meta-X", imageName: "Profile_R2", likes: 28, comments: 8, shares: 3),
+        WorkUpdate(title: "正在重构核心数据看板，帮助团队更快做出产品决策。", meta: "2天前 · Meta-X", imageName: "ProfessionalPic", likes: 36, comments: 12, shares: 5),
+        WorkUpdate(title: "今天和产品团队完成了一场很棒的设计工作坊。", meta: "1周前 · Meta-X", imageName: "ProfessionalPic", likes: 28, comments: 8, shares: 3),
     ]
 
     private let lifeMoments: [LifeMoment] = [
-        LifeMoment(title: "周末骑行", imageName: nil, systemImage: "bicycle", tint: Color(hex: "6EA6D8")),
-        LifeMoment(title: "晨间咖啡", imageName: "Profile_E2", systemImage: "cup.and.saucer.fill", tint: Color(hex: "B9824A")),
-        LifeMoment(title: "城市日落", imageName: "Profile_R1", systemImage: "sunset.fill", tint: Color(hex: "D98A5B")),
-        LifeMoment(title: "绿植角落", imageName: nil, systemImage: "camera.macro", tint: Color(hex: "7BA36A")),
+        LifeMoment(title: "周末骑行", imageName: "LifePic", systemImage: "bicycle", tint: Color(hex: "6EA6D8")),
+        LifeMoment(title: "晨间咖啡", imageName: "life2", systemImage: "cup.and.saucer.fill", tint: Color(hex: "B9824A")),
+        LifeMoment(title: "城市日落", imageName: "life3", systemImage: "sunset.fill", tint: Color(hex: "D98A5B")),
+        LifeMoment(title: "绿植角落", imageName: "LifePic", systemImage: "camera.macro", tint: Color(hex: "7BA36A")),
     ]
 
     private enum ProfileFace: String, CaseIterable {
@@ -213,7 +210,7 @@ struct ProfileView: View {
         VStack(spacing: 14) {
             Spacer(minLength: 6)
 
-            avatar(size: 88, stroke: .white.opacity(0.9))
+            avatar(imageName: "ProfessionalPic", size: 88, stroke: .white.opacity(0.9))
 
             VStack(spacing: 5) {
                 nameLine(color: .white)
@@ -273,7 +270,7 @@ struct ProfileView: View {
         VStack(spacing: 13) {
             ZStack {
                 personalDecorations
-                avatar(size: 88, stroke: Color.white.opacity(0.95))
+                avatar(imageName: "LifePic", size: 88, stroke: Color.white.opacity(0.95))
                     .padding(.top, 18)
             }
             .frame(height: 164)
@@ -339,13 +336,13 @@ struct ProfileView: View {
 
     private var personalDecorations: some View {
         GeometryReader { proxy in
-            PolaroidTile(systemImage: "cup.and.saucer.fill", rotation: -8)
+            PolaroidTile(imageName: "life2", systemImage: "cup.and.saucer.fill", rotation: -8)
                 .position(x: proxy.size.width * 0.17, y: 42)
 
-            PolaroidTile(systemImage: "camera.macro", rotation: 9)
+            PolaroidTile(imageName: "LifePic", systemImage: "camera.macro", rotation: 9)
                 .position(x: proxy.size.width * 0.85, y: 96)
 
-            PolaroidTile(systemImage: "mountain.2.fill", rotation: -7)
+            PolaroidTile(imageName: "life3", systemImage: "mountain.2.fill", rotation: -7)
                 .scaleEffect(0.82)
                 .position(x: proxy.size.width * 0.14, y: 132)
 
@@ -371,8 +368,8 @@ struct ProfileView: View {
             }
 
             VStack(spacing: 10) {
-                ForEach(workUpdates) { update in
-                    workUpdateRow(update)
+                ForEach(workUpdates.indices, id: \.self) { index in
+                    workUpdateRow(workUpdates[index])
                 }
             }
         }
@@ -387,8 +384,8 @@ struct ProfileView: View {
             }
 
             HStack(spacing: 8) {
-                ForEach(lifeMoments) { moment in
-                    lifeMomentTile(moment)
+                ForEach(lifeMoments.indices, id: \.self) { index in
+                    lifeMomentTile(lifeMoments[index])
                 }
             }
         }
@@ -497,10 +494,10 @@ struct ProfileView: View {
 
             let events = selectedTab == .myEvents ? myEvents : recommendations
             VStack(spacing: 0) {
-                ForEach(events) { event in
-                    eventRow(event: event)
+                ForEach(events.indices, id: \.self) { index in
+                    eventRow(event: events[index])
 
-                    if event.id != events.last?.id {
+                    if index != events.indices.last {
                         Divider().padding(.leading, 70)
                     }
                 }
@@ -533,8 +530,8 @@ struct ProfileView: View {
 
     // MARK: - Sub-components
 
-    private func avatar(size: CGFloat, stroke: Color) -> some View {
-        Image("ProfileHeadshot")
+    private func avatar(imageName: String, size: CGFloat, stroke: Color) -> some View {
+        Image(imageName)
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
@@ -756,8 +753,15 @@ struct ProfileView: View {
 // MARK: - Decorative Tile
 
 private struct PolaroidTile: View {
+    let imageName: String?
     let systemImage: String
     let rotation: Double
+
+    init(imageName: String? = nil, systemImage: String, rotation: Double) {
+        self.imageName = imageName
+        self.systemImage = systemImage
+        self.rotation = rotation
+    }
 
     var body: some View {
         ZStack {
@@ -765,15 +769,26 @@ private struct PolaroidTile: View {
                 .fill(Color.white)
                 .shadow(color: .black.opacity(0.16), radius: 7, x: 0, y: 4)
 
-            Image(systemName: systemImage)
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color(hex: "9C8450"))
-                .frame(width: 42, height: 36)
-                .background(Color(hex: "F5E5C6"), in: RoundedRectangle(cornerRadius: 3))
-                .padding(.bottom, 10)
+            Group {
+                if let imageName {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(Color(hex: "9C8450"))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(hex: "F5E5C6"))
+                }
+            }
+            .frame(width: 42, height: 36)
+            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+            .padding(.bottom, 10)
         }
         .frame(width: 56, height: 64)
         .rotationEffect(.degrees(rotation))
+        .accessibilityHidden(true)
     }
 }
 
