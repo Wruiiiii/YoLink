@@ -56,8 +56,8 @@ struct LoginView: View {
                         .foregroundColor(DT.subtitleGray)
                         .padding(.bottom, 32)
 
-                    // ── Email field ──────────────────────────────
-                    fieldLabel("EMAIL ADDRESS")
+                    // ── Phone field ──────────────────────────────
+                    fieldLabel("手机号")
                     emailField
                         .padding(.bottom, 30)
 
@@ -163,8 +163,9 @@ struct LoginView: View {
     }
 
     private var emailField: some View {
-        TextField("name@company.com", text: $viewModel.email)
-            .keyboardType(.emailAddress)
+        TextField("请输入手机号", text: $viewModel.email)
+            .keyboardType(.phonePad)
+            .textContentType(.telephoneNumber)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .font(.system(size: 16))
@@ -172,6 +173,14 @@ struct LoginView: View {
             .frame(height: DT.fieldHeight)
             .background(DT.fieldBg)
             .clipShape(RoundedRectangle(cornerRadius: DT.fieldRadius))
+            .onChange(of: viewModel.email) { _, newValue in
+                let digits = newValue.filter(\.isNumber)
+                let limited = String(digits.prefix(11))
+                if limited != newValue {
+                    viewModel.email = limited
+                }
+            }
+            .accessibilityLabel("手机号")
     }
 
     private var passwordField: some View {
