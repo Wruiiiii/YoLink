@@ -8,6 +8,25 @@ struct ProfileCardModel: Identifiable, Hashable {
     let followerCount: String
     let projectCount: String
     let imageName: String
+    let imageData: Data?
+
+    init(
+        name: String,
+        introduction: String,
+        identity: String,
+        followerCount: String,
+        projectCount: String,
+        imageName: String,
+        imageData: Data? = nil
+    ) {
+        self.name = name
+        self.introduction = introduction
+        self.identity = identity
+        self.followerCount = followerCount
+        self.projectCount = projectCount
+        self.imageName = imageName
+        self.imageData = imageData
+    }
 }
 
 enum ProfileCardMockData {
@@ -330,11 +349,7 @@ struct ProfileCardView: View {
 
     private var imageLayer: some View {
         ZStack(alignment: .bottom) {
-            Image(profile.imageName)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+            profileImage
                 .overlay(
                     LinearGradient(
                         stops: [
@@ -371,6 +386,23 @@ struct ProfileCardView: View {
                 .blur(radius: 3)
         )
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var profileImage: some View {
+        if let imageData = profile.imageData, let uiImage = UIImage(data: imageData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            Image(profile.imageName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        }
     }
 
     private var readabilityMask: some View {

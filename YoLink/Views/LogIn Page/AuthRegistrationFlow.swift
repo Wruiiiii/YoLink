@@ -1,6 +1,8 @@
 import SwiftUI
 import Combine
 import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
 
 enum RegistrationStep: Hashable {
     case phoneVerification
@@ -83,6 +85,7 @@ struct AuthMockService: RegistrationAuthenticating {
 struct ProfessionalProfileDraft: Equatable {
     var name = "林知夏"
     var heroImageName = "Pcard1"
+    var heroImageData: Data?
     var currentIdentity = "产品设计师"
     var schoolOrCompany = ""
     var region = "上海"
@@ -93,7 +96,8 @@ struct ProfessionalProfileDraft: Equatable {
 struct LifestyleProfileDraft: Equatable {
     var statement = ""
     var selectedInterests: [String] = []
-    var imageNames: [String] = ["LifePic", "Profile_R2"]
+    //var imageNames: [String] = ["LifePic", "Profile_R2"]
+    var imageData: [Data] = []
 }
 
 struct RegistrationProfileDraft: Equatable {
@@ -103,18 +107,16 @@ struct RegistrationProfileDraft: Equatable {
 
 enum RegistrationProfileValidator {
     static func professionalError(for draft: ProfessionalProfileDraft) -> String? {
-        if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请输入姓名" }
-        if draft.currentIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           draft.schoolOrCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "请填写你的职业身份"
-        }
-        if draft.bio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请添加一段职业简介" }
+        if draft.bio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请填写职业简介" }
+        if draft.schoolOrCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请输入学校" }
+        if draft.selectedSkills.isEmpty { return "请至少选择一个专业领域" }
+        if draft.heroImageData == nil { return "请上传一张职业照片" }
         return nil
     }
 
     static func lifestyleError(for draft: LifestyleProfileDraft) -> String? {
         if draft.selectedInterests.isEmpty { return "请至少选择一个兴趣" }
-        if draft.imageNames.isEmpty { return "请添加一张生活照片" }
+        if draft.imageNames.isEmpty && draft.imageData.isEmpty { return "请添加一张生活照片" }
         if draft.statement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请写一句关于生活中的你" }
         return nil
     }
@@ -125,6 +127,16 @@ struct MockProfileService {
 
     mutating func save(_ draft: RegistrationProfileDraft) {
         lastSavedDraft = draft
+    }
+}
+
+struct PickedProfileImageData: Transferable {
+    let data: Data
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(importedContentType: .image) { data in
+            PickedProfileImageData(data: data)
+        }
     }
 }
 
@@ -213,7 +225,8 @@ final class RegistrationViewModel: ObservableObject {
                 .joined(separator: " · "),
             followerCount: "0",
             projectCount: "\(max(profileDraft.professional.selectedSkills.count, 1))",
-            imageName: profileDraft.professional.heroImageName
+            imageName: profileDraft.professional.heroImageName,
+            imageData: profileDraft.professional.heroImageData
         )
     }
 
@@ -322,6 +335,10 @@ final class RegistrationViewModel: ObservableObject {
         if profileDraft.professional.selectedSkills.contains(skill) {
             profileDraft.professional.selectedSkills.removeAll { $0 == skill }
         } else {
+            guard profileDraft.professional.selectedSkills.count < 5 else {
+                profileCreationError = "最多选择 5 个专业领域"
+                return
+            }
             profileDraft.professional.selectedSkills.append(skill)
         }
         profileCreationError = nil
@@ -332,6 +349,57 @@ final class RegistrationViewModel: ObservableObject {
             profileDraft.lifestyle.selectedInterests.removeAll { $0 == interest }
         } else {
             profileDraft.lifestyle.selectedInterests.append(interest)
+        }
+        profileCreationError = nil
+    }
+
+    func addCustomSkill(_ skill: String) {
+        let trimmed = skill.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if !profileDraft.professional.selectedSkills.contains(trimmed) {
+            guard profileDraft.professional.selectedSkills.count < 5 else {
+                profileCreationError = "最多选择 5 个专业领域"
+                return
+            }
+            profileDraft.professional.selectedSkills.append(trimmed)
+        }
+        profileCreationError = nil
+    }
+
+    func updateProfessionalPhotoData(_ data: Data) {
+        guard !data.isEmpty else { return }
+        profileDraft.professional.heroImageData = data
+        profileCreationError = nil
+    }
+
+    func removeProfessionalPhoto() {
+        profileDraft.professional.heroImageData = nil
+        profileCreationError = nil
+    }
+
+    func addCustomInterest(_ interest: String) {
+        let trimmed = interest.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if !profileDraft.lifestyle.selectedInterests.contains(trimmed) {
+            profileDraft.lifestyle.selectedInterests.append(trimmed)
+        }
+        profileCreationError = nil
+    }
+
+    func addLifestylePhotoData(_ data: Data) {
+        guard !data.isEmpty else { return }
+        profileDraft.lifestyle.imageData.append(data)
+        profileCreationError = nil
+    }
+
+    func removeLifestylePhoto(at index: Int) {
+        if index < profileDraft.lifestyle.imageData.count {
+            profileDraft.lifestyle.imageData.remove(at: index)
+        } else {
+            let demoIndex = index - profileDraft.lifestyle.imageData.count
+            if demoIndex >= 0, demoIndex < profileDraft.lifestyle.imageNames.count {
+                profileDraft.lifestyle.imageNames.remove(at: demoIndex)
+            }
         }
         profileCreationError = nil
     }
@@ -794,7 +862,7 @@ private struct DualProfileIntroductionView: View {
 
                 ZStack {
                     ProfileCardView(profile: demoCard)
-                        .frame(width: 296, height: 493)
+                        .frame(width: 266, height: 463)
                         .scaleEffect(0.92)
                         .rotationEffect(.degrees(didRevealCards && !reduceMotion ? 4.5 : 1))
                         .offset(x: didRevealCards && !reduceMotion ? 88 : 52, y: didRevealCards && !reduceMotion ? -4 : 10)
@@ -802,7 +870,7 @@ private struct DualProfileIntroductionView: View {
                         .accessibilityHidden(true)
 
                     ProfileCardView(profile: demoCard)
-                        .frame(width: 296, height: 493)
+                        .frame(width: 266, height: 463)
                         .scaleEffect(0.94)
                         .rotationEffect(.degrees(didRevealCards && !reduceMotion ? -5 : -1))
                         .offset(x: didRevealCards && !reduceMotion ? -84 : -46, y: didRevealCards && !reduceMotion ? 10 : 14)
@@ -810,12 +878,12 @@ private struct DualProfileIntroductionView: View {
                         .accessibilityHidden(true)
 
                     ProfileCardView(profile: demoCard)
-                        .frame(width: 296, height: 493)
+                        .frame(width: 250, height: 450)
                         .rotationEffect(.degrees(0))
                         .accessibilityLabel("双面卡片示例，展示职业面与生活面")
                 }
-                .frame(height: 524)
-                .padding(.top, -4)
+                .frame(height: 450)
+                .padding(.top,0)
                 .onAppear {
                     guard !reduceMotion else { return }
                     withAnimation(.spring(response: 0.62, dampingFraction: 0.82)) {
@@ -824,16 +892,13 @@ private struct DualProfileIntroductionView: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text("每个人，都不止一面")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(RegistrationTheme.navy)
                     Text("用职业面展示经历与能力，用生活面分享兴趣与真实生活")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Color(hex: "757D8C"))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 28)
                 }
-                .padding(.top, -12)
+                .padding(.top, 10)
 
                 Spacer(minLength: 18)
 
@@ -846,7 +911,7 @@ private struct DualProfileIntroductionView: View {
                     viewModel.startDualProfileCreation()
                 }
                 .padding(.horizontal, 56)
-                .padding(.bottom, 52)
+                .padding(.bottom, 45)
             }
         }
     }
@@ -856,6 +921,7 @@ private struct ProfileCreationView: View {
     @ObservedObject var viewModel: RegistrationViewModel
     let onBack: () -> Void
     @FocusState private var focusedField: Field?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     fileprivate enum Field: Hashable {
         case name
@@ -885,59 +951,52 @@ private struct ProfileCreationView: View {
 
                     RegistrationProgressView(currentIndex: 1)
                         .padding(.top, 24)
+                        .padding(.bottom, 30)
 
-                    Text("完善档案详情")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color(hex: "0E0B3E"))
-                        .padding(.top, 26)
+                    VStack(spacing: 20) {
+                        Text("完善档案详情")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "0E0B3E"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, viewModel.editingProfileSide == .professional ? 16 : 10)
 
-                    ProfileSideSwitcher(
-                        selection: viewModel.editingProfileSide,
-                        isCompact: viewModel.editingProfileSide == .lifestyle
-                    ) { side in
-                        focusedField = nil
-                        viewModel.switchProfileSide(to: side)
-                    }
-                    .padding(.top, 22)
+                        ProfileSideSwitcher(
+                            selection: viewModel.editingProfileSide,
+                            isCompact: viewModel.editingProfileSide == .lifestyle
+                        ) { side in
+                            focusedField = nil
+                            viewModel.switchProfileSide(to: side)
+                        }
+                        .frame(maxWidth: viewModel.editingProfileSide == .lifestyle ? 280 : .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-                    VStack(spacing: 28) {
                         if viewModel.editingProfileSide == .professional {
                             ProfessionalProfileEditor(viewModel: viewModel, focusedField: $focusedField)
-                                .padding(.horizontal, 20)
-                                .transition(.move(edge: .leading).combined(with: .opacity))
+                                .transition(
+                                    reduceMotion
+                                    ? .opacity
+                                    : .move(edge: .leading).combined(with: .opacity)
+                                )
                         } else {
                             LifestyleProfileEditor(viewModel: viewModel, focusedField: $focusedField)
-                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                                .transition(
+                                    reduceMotion
+                                    ? .opacity
+                                    : .move(edge: .trailing).combined(with: .opacity)
+                                )
                         }
                     }
-                    .padding(.top, 12)
-                    .padding(.bottom, 148)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 150)
+                    .animation(.spring(response: 0.34, dampingFraction: 0.9), value: viewModel.editingProfileSide)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) {
-                InlineValidationMessage(message: viewModel.profileCreationError)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                GlassPrimaryButton(
-                    title: "预览我的卡片  →",
-                    isEnabled: true,
-                    action: {
-                        focusedField = nil
-                        viewModel.previewProfile()
-                    }
-                )
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 18)
-            .padding(.bottom, 24)
-            .background(.ultraThinMaterial)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(RegistrationTheme.navy.opacity(0.08))
-                    .frame(height: 1)
+            RegistrationBottomActionBar(errorMessage: viewModel.profileCreationError) {
+                focusedField = nil
+                viewModel.previewProfile()
             }
         }
         .onTapGesture {
@@ -949,120 +1008,291 @@ private struct ProfileCreationView: View {
 private struct ProfessionalProfileEditor: View {
     @ObservedObject var viewModel: RegistrationViewModel
     var focusedField: FocusState<ProfileCreationView.Field?>.Binding
+    @State private var customSkill = ""
+    @State private var photoPickerItem: PhotosPickerItem?
+    @FocusState private var isCustomSkillFocused: Bool
 
-    private let skillOptions = ["产品设计", "全栈开发", "AI算法", "品牌营销", "数据分析", "+ 自定义"]
+    private let skillOptions = ["产品设计", "软件开发", "人工智能", "数据分析", "市场营销", "生物医学工程"]
 
     var body: some View {
-        VStack(spacing: 28) {
-            ProfileGlassPanel {
-                RegistrationFieldLabel("姓名")
-                GlassInputContainer {
-                    TextField("例如：林知夏", text: $viewModel.profileDraft.professional.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(RegistrationTheme.navy)
-                        .focused(focusedField, equals: .name)
-                }
-                .frame(height: 52)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            ProfileFieldSection(title: "职业简介") {
+                VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 10) {
+                        TextField("用一句话介绍你的职业方向与优势", text: $viewModel.profileDraft.professional.bio, axis: .vertical)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "0E0B3E"))
+                            .lineLimit(1...3)
+                            .focused(focusedField, equals: .bio)
+                            .onChange(of: viewModel.profileDraft.professional.bio) { _, newValue in
+                                if newValue.count > 80 {
+                                    viewModel.profileDraft.professional.bio = String(newValue.prefix(80))
+                                }
+                            }
 
-            ProfileGlassPanel {
-                RegistrationFieldLabel("就读学校 / 现任职")
-                GlassInputContainer {
-                    TextField("例如：清华大学 · 交互设计", text: $viewModel.profileDraft.professional.schoolOrCompany)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(RegistrationTheme.navy)
-                        .focused(focusedField, equals: .schoolOrCompany)
-                }
-                .frame(height: 52)
-            }
-
-            ProfileGlassPanel {
-                RegistrationFieldLabel("核心领域（多选）")
-                FlowTagLayout(items: skillOptions) { skill in
-                    SelectableTag(
-                        title: skill,
-                        isSelected: viewModel.profileDraft.professional.selectedSkills.contains(skill)
-                    ) {
-                        viewModel.toggleSkill(skill)
+                        Image(systemName: "pencil")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(hex: "86868B").opacity(0.55))
+                            .accessibilityHidden(true)
                     }
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 13)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 48, style: .continuous)
+                            .stroke(.white.opacity(0.6), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+
+                    Text("\(viewModel.profileDraft.professional.bio.count)/80")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(hex: "86868B"))
+                        .padding(.trailing, 8)
+                        .accessibilityLabel("职业简介字数 \(viewModel.profileDraft.professional.bio.count) / 80")
                 }
             }
 
-            ProfileGlassPanel {
-                RegistrationFieldLabel("职业语录")
-                TextEditor(text: $viewModel.profileDraft.professional.bio)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(RegistrationTheme.navy)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 92)
-                    .overlay(alignment: .topLeading) {
-                        if viewModel.profileDraft.professional.bio.isEmpty {
-                            Text("用一句话定义你的专业精神...")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(Color(hex: "86868B").opacity(0.5))
-                                .padding(.top, 8)
-                                .padding(.leading, 5)
-                                .allowsHitTesting(false)
+            ProfileFieldSection(title: "学校") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        TextField("请输入你的学校", text: $viewModel.profileDraft.professional.schoolOrCompany)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "0E0B3E"))
+                            .focused(focusedField, equals: .schoolOrCompany)
+                            .submitLabel(.done)
+
+                        Image(systemName: "graduationcap")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(hex: "86868B").opacity(0.55))
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 13)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 48, style: .continuous)
+                            .stroke(.white.opacity(0.6), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+
+                    if !viewModel.profileDraft.professional.schoolOrCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        ProfileTag(
+                            title: viewModel.profileDraft.professional.schoolOrCompany,
+                            isSelected: true,
+                            showsRemoveIcon: true
+                        ) {
+                            viewModel.profileDraft.professional.schoolOrCompany = ""
                         }
                     }
-                    .focused(focusedField, equals: .bio)
+                }
+            }
+
+            ProfileFieldSection(title: "专业领域") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Spacer()
+                        TagAddButton(title: "添加") {
+                            isCustomSkillFocused = true
+                        }
+                        .accessibilityLabel("添加专业领域")
+                    }
+
+                    FlowTagLayout(items: allSkillOptions) { skill in
+                        ProfileTag(
+                            title: skill,
+                            isSelected: viewModel.profileDraft.professional.selectedSkills.contains(skill),
+                            showsRemoveIcon: true
+                        ) {
+                            viewModel.toggleSkill(skill)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .bold))
+                        TextField("添加领域", text: $customSkill)
+                            .submitLabel(.done)
+                            .focused($isCustomSkillFocused)
+                            .onSubmit(addCustomSkill)
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(hex: "0E0B3E"))
+                    .frame(height: 43)
+                    .padding(.horizontal, 20)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .background(Color.white.opacity(0.46), in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(.white.opacity(0.58), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.08), radius: 18, x: 0, y: 8)
+                    .frame(maxWidth: 152)
+
+                    Text("最多选择 5 个专业领域")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(hex: "86868B"))
+                        .padding(.leading, 4)
+                }
+            }
+
+            ProfileFieldSection(title: "职业照片") {
+                ProfessionalPhotoPicker(
+                    imageData: viewModel.profileDraft.professional.heroImageData,
+                    pickerItem: $photoPickerItem,
+                    onDelete: viewModel.removeProfessionalPhoto
+                )
+                .onChange(of: photoPickerItem) { _, newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: PickedProfileImageData.self)?.data {
+                            await MainActor.run {
+                                viewModel.updateProfessionalPhotoData(data)
+                            }
+                        }
+                        await MainActor.run {
+                            photoPickerItem = nil
+                        }
+                    }
+                }
+
+                Text("* 照片将展示在你的职业面卡片中")
+                    .font(.system(size: 12, weight: .medium).italic())
+                    .tracking(0.6)
+                    .foregroundColor(Color(hex: "86868B"))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityLabel("职业信息编辑")
+    }
+
+    private var allSkillOptions: [String] {
+        skillOptions + viewModel.profileDraft.professional.selectedSkills.filter { !skillOptions.contains($0) }
+    }
+
+    private func addCustomSkill() {
+        viewModel.addCustomSkill(customSkill)
+        customSkill = ""
+        isCustomSkillFocused = false
     }
 }
 
 private struct LifestyleProfileEditor: View {
     @ObservedObject var viewModel: RegistrationViewModel
     var focusedField: FocusState<ProfileCreationView.Field?>.Binding
+    @State private var customInterest = ""
+    @State private var photoPickerItem: PhotosPickerItem?
+    @FocusState private var isCustomInterestFocused: Bool
 
-    private let interestOptions = ["摄影", "咖啡", "徒步", "独立音乐", "旅行", "阅读"]
+    private let interestOptions = ["摄影", "咖啡", "徒步", "独立音乐"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                RegistrationFieldLabel("生活态度")
-                GlassInputContainer {
-                    TextField("总在寻找下一家好喝的咖啡馆。", text: $viewModel.profileDraft.lifestyle.statement)
+        VStack(alignment: .leading, spacing: 8) {
+            ProfileFieldSection(title: "生活态度") {
+                HStack(spacing: 10) {
+                    TextField("总在寻找下一家好喝的咖啡馆。", text: $viewModel.profileDraft.lifestyle.statement, axis: .vertical)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(RegistrationTheme.navy)
+                        .foregroundColor(Color(hex: "0E0B3E"))
+                        .lineLimit(1...3)
                         .focused(focusedField, equals: .statement)
-                }
-                .frame(height: 52)
-            }
-            .padding(.horizontal, 0)
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    RegistrationFieldLabel("兴趣爱好")
-                    Spacer()
-                    Label("添加", systemImage: "plus.circle")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(RegistrationTheme.navy)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(hex: "86868B").opacity(0.55))
+                        .accessibilityHidden(true)
                 }
-                FlowTagLayout(items: interestOptions) { interest in
-                    SelectableTag(
-                        title: interest,
-                        isSelected: viewModel.profileDraft.lifestyle.selectedInterests.contains(interest)
-                    ) {
-                        viewModel.toggleInterest(interest)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 13)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 48, style: .continuous)
+                        .stroke(.white.opacity(0.6), lineWidth: 1)
+                )
+                .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+            }
+
+            ProfileFieldSection(title: "兴趣爱好") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Spacer()
+                        TagAddButton(title: "添加") {
+                            isCustomInterestFocused = true
+                        }
+                        .accessibilityLabel("添加兴趣")
+                    }
+
+                    FlowTagLayout(items: allInterestOptions) { interest in
+                        ProfileTag(
+                            title: interest,
+                            isSelected: viewModel.profileDraft.lifestyle.selectedInterests.contains(interest),
+                            showsRemoveIcon: true
+                        ) {
+                            viewModel.toggleInterest(interest)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .bold))
+                        TextField("添加兴趣", text: $customInterest)
+                            .submitLabel(.done)
+                            .focused($isCustomInterestFocused)
+                            .onSubmit(addCustomInterest)
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(hex: "0E0B3E"))
+                    .frame(height: 43)
+                    .padding(.horizontal, 20)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .background(Color.white.opacity(0.46), in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(.white.opacity(0.58), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.08), radius: 18, x: 0, y: 8)
+                    .frame(maxWidth: 152)
+                }
+            }
+
+            ProfileFieldSection(title: "生活瞬间") {
+                LifestylePhotoGrid(
+                    draft: viewModel.profileDraft.lifestyle,
+                    pickerItem: $photoPickerItem,
+                    onDelete: viewModel.removeLifestylePhoto(at:)
+                )
+                .onChange(of: photoPickerItem) { _, newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: PickedProfileImageData.self)?.data {
+                            await MainActor.run {
+                                viewModel.addLifestylePhotoData(data)
+                            }
+                        }
+                        await MainActor.run {
+                            photoPickerItem = nil
+                        }
                     }
                 }
-            }
-            .padding(.top, 2)
 
-            VStack(alignment: .leading, spacing: 8) {
-                RegistrationFieldLabel("生活瞬间")
-                LifestylePhotoGrid(imageNames: viewModel.profileDraft.lifestyle.imageNames)
                 Text("* 照片将以 Liquid Glass 风格卡片展示在你的主页。")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12, weight: .medium).italic())
+                    .tracking(0.6)
                     .foregroundColor(Color(hex: "86868B"))
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
             }
-            .padding(.top, 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityLabel("生活信息编辑")
+    }
+
+    private var allInterestOptions: [String] {
+        interestOptions + viewModel.profileDraft.lifestyle.selectedInterests.filter { !interestOptions.contains($0) }
+    }
+
+    private func addCustomInterest() {
+        viewModel.addCustomInterest(customInterest)
+        customInterest = ""
+        isCustomInterestFocused = false
     }
 }
 
@@ -1217,12 +1447,12 @@ private struct RegistrationEditorialHeadline: View {
             ZStack(alignment: .leading) {
                 Rectangle()
                     .fill(RegistrationTheme.yellow)
-                    .frame(width: 207, height: 51)
-                    .offset(x: 95, y: 46)
+                    .frame(width: 165, height: 45)
+                    .offset(x: 70, y: 25)
                     .accessibilityHidden(true)
 
                 Text("不止一面\n才是真实的你。")
-                    .font(.system(size: 46, weight: .bold))
+                    .font(.system(size: 35, weight: .bold))
                     .lineSpacing(-2)
                     .foregroundColor(RegistrationTheme.navy)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1230,7 +1460,7 @@ private struct RegistrationEditorialHeadline: View {
             .frame(height: 98, alignment: .topLeading)
 
             Text("SHOW BOTH SIDES OF YOU")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 14, weight: .bold))
                 .tracking(1.7)
                 .foregroundColor(Color(hex: "757D8C").opacity(0.62))
         }
@@ -1259,20 +1489,23 @@ private struct ProfileSideSwitcher: View {
     let selection: RegistrationProfileSide
     var isCompact = false
     let onSelect: (RegistrationProfileSide) -> Void
+    @Namespace private var switcherNamespace
 
     var body: some View {
-        HStack(spacing: 0) {
-            sideButton(.professional)
-            sideButton(.lifestyle)
+        ZStack {
+            HStack(spacing: 0) {
+                sideButton(.professional)
+                sideButton(.lifestyle)
+            }
         }
         .padding(isCompact ? 5 : 4)
-        .frame(maxWidth: isCompact ? 280 : .infinity)
+        .frame(height: isCompact ? 46 : 48)
         .background(isCompact ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color(hex: "F3F4F5")), in: Capsule())
         .overlay(
             Capsule()
                 .stroke(.white.opacity(isCompact ? 0.6 : 0.35), lineWidth: 1)
         )
-        .shadow(color: RegistrationTheme.navy.opacity(isCompact ? 0.05 : 0.04), radius: isCompact ? 20 : 8, x: 0, y: isCompact ? 4 : 2)
+        .shadow(color: RegistrationTheme.navy.opacity(isCompact ? 0.05 : 0.05), radius: isCompact ? 20 : 8, x: 0, y: isCompact ? 4 : 1)
         .accessibilityElement(children: .contain)
     }
 
@@ -1284,10 +1517,15 @@ private struct ProfileSideSwitcher: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(selection == side ? RegistrationTheme.navy : Color(hex: "86868B"))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, isCompact ? 6 : 12)
-                .padding(.horizontal, isCompact ? 12 : 0)
-                .background(selection == side ? (isCompact && side == .lifestyle ? RegistrationTheme.yellow : Color.white) : .clear, in: Capsule())
-                .shadow(color: selection == side ? .black.opacity(0.10) : .clear, radius: 6, x: 0, y: 3)
+                .frame(height: isCompact ? 36 : 40)
+                .background {
+                    if selection == side {
+                        Capsule()
+                            .fill(side == .lifestyle ? Color(hex: "FDD434") : .white)
+                            .matchedGeometryEffect(id: "selectedProfileSide", in: switcherNamespace)
+                            .shadow(color: .black.opacity(0.10), radius: 6, x: 0, y: 3)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(side.title)
@@ -1296,25 +1534,29 @@ private struct ProfileSideSwitcher: View {
 }
 
 private struct ProfileGlassPanel<Content: View>: View {
+    var height: CGFloat?
+    var verticalPadding: CGFloat = 28
+    var horizontalPadding: CGFloat = 28
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             content
         }
-        .padding(28)
+        .padding(.vertical, verticalPadding)
+        .padding(.horizontal, horizontalPadding)
+        .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .background(Color.white.opacity(0.70), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(.white.opacity(0.45))
-                .blendMode(.softLight)
+                .stroke(.white.opacity(0.80), lineWidth: 1)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(Color(hex: "232253").opacity(0.10), lineWidth: 1)
+                .stroke(RegistrationTheme.navy.opacity(0.06), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -1323,7 +1565,7 @@ private struct FlowTagLayout<Item: Hashable, Content: View>: View {
     @ViewBuilder let content: (Item) -> Content
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], alignment: .leading, spacing: 10) {
+        TagFlowLayout(horizontalSpacing: 8, verticalSpacing: 10) {
             ForEach(items, id: \.self) { item in
                 content(item)
             }
@@ -1331,38 +1573,122 @@ private struct FlowTagLayout<Item: Hashable, Content: View>: View {
     }
 }
 
-private struct SelectableTag: View {
+private struct TagFlowLayout: Layout {
+    var horizontalSpacing: CGFloat = 8
+    var verticalSpacing: CGFloat = 10
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? 350
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var widestRow: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX > 0, currentX + size.width > maxWidth {
+                widestRow = max(widestRow, currentX - horizontalSpacing)
+                currentX = 0
+                currentY += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+            currentX += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+
+        widestRow = max(widestRow, currentX > 0 ? currentX - horizontalSpacing : 0)
+        return CGSize(width: maxWidth, height: currentY + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var currentX = bounds.minX
+        var currentY = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX > bounds.minX, currentX + size.width > bounds.maxX {
+                currentX = bounds.minX
+                currentY += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            subview.place(
+                at: CGPoint(x: currentX, y: currentY),
+                proposal: ProposedViewSize(width: size.width, height: size.height)
+            )
+            currentX += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+}
+
+private struct ProfileTag: View {
     let title: String
     let isSelected: Bool
+    var showsRemoveIcon = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Text(title)
-                if isSelected {
+                if showsRemoveIcon && isSelected {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                 }
             }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(RegistrationTheme.navy)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 9)
-            .background(isSelected ? Color(hex: "FFE17B") : .white.opacity(0.42), in: Capsule())
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(Color(hex: "0E0B3E"))
+            .frame(height: 43)
+            .padding(.horizontal, 24)
+            .background(.ultraThinMaterial, in: Capsule())
+            .background(
+                (isSelected ? RegistrationTheme.yellow.opacity(0.54) : Color.white.opacity(0.48)),
+                in: Capsule()
+            )
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? .white.opacity(0.4) : RegistrationTheme.navy.opacity(0.10), lineWidth: 1)
+                    .stroke(.white.opacity(isSelected ? 0.70 : 0.58), lineWidth: 1)
             )
-            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 6, x: 0, y: 2)
+            .overlay(alignment: .top) {
+                Capsule()
+                    .fill(.white.opacity(0.34))
+                    .frame(height: 1)
+                    .padding(.horizontal, 14)
+            }
+            .shadow(color: RegistrationTheme.navy.opacity(isSelected ? 0.10 : 0.08), radius: 18, x: 0, y: 8)
+            .shadow(color: .white.opacity(0.75), radius: 1, x: 0, y: -1)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LiquidGlassPressButtonStyle(isEnabled: true))
         .accessibilityLabel("\(title)，\(isSelected ? "已选择" : "未选择")")
     }
 }
 
+private struct TagAddButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 15, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .tracking(0.6)
+            }
+            .foregroundColor(Color(hex: "0E0B3E"))
+            .frame(height: 20)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct LifestylePhotoGrid: View {
-    let imageNames: [String]
+    let draft: LifestyleProfileDraft
+    @Binding var pickerItem: PhotosPickerItem?
+    let onDelete: (Int) -> Void
 
     var body: some View {
         GeometryReader { proxy in
@@ -1370,19 +1696,15 @@ private struct LifestylePhotoGrid: View {
             let largeWidth = column * 2 + 8
 
             HStack(spacing: 8) {
-                imageTile(imageNames.first ?? "LifePic")
+                photoTile(at: 0)
                     .frame(width: largeWidth, height: 256)
                     .overlay(alignment: .topTrailing) {
-                        Image(systemName: "heart")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(RegistrationTheme.navy)
-                            .frame(width: 34, height: 34)
-                            .background(.ultraThinMaterial, in: Circle())
+                        PhotoOverlayButton(systemName: "heart", label: "收藏生活照片")
                             .padding(8)
                     }
 
                 VStack(spacing: 8) {
-                    imageTile(imageNames.dropFirst().first ?? "Profile_R2")
+                    photoTile(at: 1)
                         .frame(width: column, height: 124)
 
                     addTile
@@ -1393,35 +1715,330 @@ private struct LifestylePhotoGrid: View {
         .frame(height: 256)
     }
 
-    private func imageTile(_ imageName: String) -> some View {
-        Image(imageName)
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(.white.opacity(0.35), lineWidth: 1)
-            )
-            .clipped()
-            .accessibilityLabel("生活照片")
+    @ViewBuilder
+    private func photoTile(at index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            if let image = uiImage(at: index) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let imageName = imageName(at: index) {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                emptyPhoto
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .stroke(.white.opacity(0.30), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(index == 0 ? 0.12 : 0.04), radius: index == 0 ? 15 : 6, x: 0, y: index == 0 ? 10 : 3)
+        .overlay(alignment: .topLeading) {
+            if hasPhoto(at: index) {
+                Button {
+                    onDelete(index)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(RegistrationTheme.navy)
+                        .frame(width: 28, height: 28)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .accessibilityLabel("删除第 \(index + 1) 张生活照片")
+            }
+        }
+        .accessibilityLabel(hasPhoto(at: index) ? "生活照片 \(index + 1)" : "生活照片占位")
     }
 
     private var addTile: some View {
+        PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
+            VStack(spacing: 4) {
+                Image(systemName: "camera.badge.plus")
+                    .font(.system(size: 26, weight: .medium))
+                Text("添加")
+                    .font(.system(size: 12, weight: .medium))
+                    .tracking(0.6)
+            }
+            .foregroundColor(Color(hex: "86868B"))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .stroke(Color(hex: "86868B").opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            )
+            .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("添加生活照片")
+    }
+
+    private var emptyPhoto: some View {
         VStack(spacing: 6) {
-            Image(systemName: "camera.badge.plus")
-                .font(.system(size: 25, weight: .medium))
-            Text("添加")
+            Image(systemName: "photo")
+                .font(.system(size: 24, weight: .medium))
+            Text("暂无照片")
                 .font(.system(size: 12, weight: .medium))
         }
         .foregroundColor(Color(hex: "86868B"))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color(hex: "86868B").opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-        )
-        .accessibilityLabel("添加生活照片，当前使用 Demo 图片")
+        .background(.ultraThinMaterial)
+    }
+
+    private func uiImage(at index: Int) -> UIImage? {
+        guard index < draft.imageData.count else { return nil }
+        return UIImage(data: draft.imageData[index])
+    }
+
+    private func imageName(at index: Int) -> String? {
+        let demoIndex = index - draft.imageData.count
+        guard demoIndex >= 0, demoIndex < draft.imageNames.count else { return nil }
+        return draft.imageNames[demoIndex]
+    }
+
+    private func hasPhoto(at index: Int) -> Bool {
+        uiImage(at: index) != nil || imageName(at: index) != nil
+    }
+}
+
+private struct ProfessionalPhotoPicker: View {
+    let imageData: Data?
+    @Binding var pickerItem: PhotosPickerItem?
+    let onDelete: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
+                ZStack(alignment: .bottomLeading) {
+                    imageContent
+
+                    LinearGradient(
+                        colors: [.clear, RegistrationTheme.navy.opacity(0.42)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+                    .accessibilityHidden(true)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: imageData == nil ? "camera.badge.plus" : "arrow.triangle.2.circlepath.camera")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(imageData == nil ? "添加职业照片" : "替换职业照片")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.32), lineWidth: 1))
+                    .padding(14)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 256)
+                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .stroke(.white.opacity(0.30), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 15, x: 0, y: 10)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(imageData == nil ? "添加职业照片" : "替换职业照片")
+
+            if imageData != nil {
+                Button(action: onDelete) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(RegistrationTheme.navy)
+                        .frame(width: 30, height: 30)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+                .accessibilityLabel("删除职业照片")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var imageContent: some View {
+        if let imageData, let uiImage = UIImage(data: imageData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            VStack(spacing: 12) {
+                Image(systemName: "camera.badge.plus")
+                    .font(.system(size: 34, weight: .medium))
+                    .foregroundColor(Color(hex: "86868B"))
+                Text("添加职业照片")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color(hex: "0E0B3E"))
+                Text("建议上传正装或职业休闲照，展示专业的一面")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(hex: "86868B"))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .background(Color.white.opacity(0.50))
+        }
+    }
+}
+
+private struct ProfileSectionLabel: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 16, weight: .medium))
+            .tracking(1.6)
+            .foregroundColor(Color(hex: "86868B"))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+private struct ProfileFieldSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .tracking(0.28)
+                .foregroundColor(Color(hex: "86868B"))
+                .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct UnderlineTextField: View {
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(Color(hex: "0E0B3E"))
+            .padding(.horizontal, 12)
+            .padding(.top, 14)
+            .padding(.bottom, 13)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color(hex: "6B7280"))
+                    .frame(height: 1)
+            }
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+    }
+}
+
+private struct EditableQuoteField: View {
+    let placeholder: String
+    @Binding var text: String
+    let minHeight: CGFloat
+
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(Color(hex: "0E0B3E"))
+            .scrollContentBackground(.hidden)
+            .frame(minHeight: minHeight)
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            .overlay(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(hex: "86868B").opacity(0.5))
+                        .padding(.top, 12)
+                        .padding(.leading, 12)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(RegistrationTheme.navy.opacity(0.20))
+                    .frame(height: 1)
+            }
+    }
+}
+
+private struct RegistrationBottomActionBar: View {
+    let errorMessage: String?
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            InlineValidationMessage(message: errorMessage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    Text("预览我的卡片")
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color(hex: "0E0B3E"), in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(.white.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 15, x: 0, y: 10)
+                .shadow(color: .black.opacity(0.10), radius: 6, x: 0, y: 4)
+            }
+            .buttonStyle(LiquidGlassPressButtonStyle(isEnabled: true))
+            .accessibilityLabel("预览我的卡片")
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 25)
+        .padding(.bottom, 24)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(RegistrationTheme.navy.opacity(0.10))
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct PhotoOverlayButton: View {
+    let systemName: String
+    let label: String
+
+    var body: some View {
+        Button {} label: {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(RegistrationTheme.navy)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -1463,11 +2080,6 @@ private struct LifestyleCardBack: View {
                 )
                 .shadow(color: Color(hex: "15201E").opacity(0.05), radius: 35, x: 0, y: 16)
 
-            Image(draft.imageNames.first ?? "LifePic")
-                .resizable()
-                .scaledToFill()
-                .padding(7)
-                .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
 
             LinearGradient(
                 colors: [.clear, Color(hex: "FFF7D1").opacity(0.96)],
