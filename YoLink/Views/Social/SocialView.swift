@@ -413,7 +413,7 @@ struct ProfileCardView: View {
                 LinearGradient(
                     stops: [
                         .init(color: .white.opacity(0.0), location: 0.0),
-                        .init(color: Color(hex: "F7F8F5").opacity(0.72), location: 0.42),
+                        .init(color: Color(hex: "F7F8F5").opacity(0.76), location: 0.34),
                         .init(color: Color(hex: "F2F1EC").opacity(0.96), location: 1.0),
                     ],
                     startPoint: .top,
@@ -421,12 +421,12 @@ struct ProfileCardView: View {
                 )
 
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.white.opacity(0.40))
-                    .frame(height: 120)
-                    .blur(radius: 18)
-                    .offset(y: 20)
+                    .fill(.white.opacity(0.58))
+                    .frame(height: 175)
+                    .blur(radius: 16)
+                    .offset(y: 18)
             }
-            .frame(height: 210)
+            .frame(height: 258)
             .blendMode(.normal)
         }
         .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))

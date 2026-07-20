@@ -842,8 +842,19 @@ private struct DualProfileIntroductionView: View {
     let onBack: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var didRevealCards = false
+    @State private var isDemoCardShowingBack = false
 
     private let demoCard = ProfileCardMockData.cards.first!
+    private let demoBackCard = ProfileCardModel(
+        name: "林知夏",
+        introduction: "专业咖啡师，用一杯咖啡连接真实日常。",
+        identity: "咖啡师 · 生活探索者",
+        followerCount: "1,286",
+        projectCount: "48",
+        imageName: "LifePic"
+    )
+    private let trailingDemoCard = ProfileCardMockData.cards[2]
+    private let leadingDemoCard = ProfileCardMockData.cards[1]
 
     var body: some View {
         ZStack {
@@ -864,7 +875,7 @@ private struct DualProfileIntroductionView: View {
                     .padding(.top, 18)
 
                 ZStack {
-                    ProfileCardView(profile: demoCard)
+                    ProfileCardView(profile: trailingDemoCard)
                         .frame(width: 266, height: 463)
                         .scaleEffect(0.92)
                         .rotationEffect(.degrees(didRevealCards && !reduceMotion ? 4.5 : 1))
@@ -872,7 +883,7 @@ private struct DualProfileIntroductionView: View {
                         .opacity(0.58)
                         .accessibilityHidden(true)
 
-                    ProfileCardView(profile: demoCard)
+                    ProfileCardView(profile: leadingDemoCard)
                         .frame(width: 266, height: 463)
                         .scaleEffect(0.94)
                         .rotationEffect(.degrees(didRevealCards && !reduceMotion ? -5 : -1))
@@ -880,7 +891,11 @@ private struct DualProfileIntroductionView: View {
                         .opacity(0.66)
                         .accessibilityHidden(true)
 
-                    ProfileCardView(profile: demoCard)
+                    IntroFlippableProfileCard(
+                        frontProfile: demoCard,
+                        backProfile: demoBackCard,
+                        isShowingBack: $isDemoCardShowingBack
+                    )
                         .frame(width: 250, height: 450)
                         .rotationEffect(.degrees(0))
                         .accessibilityLabel("双面卡片示例，展示职业面与生活面")
@@ -891,6 +906,14 @@ private struct DualProfileIntroductionView: View {
                     guard !reduceMotion else { return }
                     withAnimation(.spring(response: 0.62, dampingFraction: 0.82)) {
                         didRevealCards = true
+                    }
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(1200))
+                        await MainActor.run {
+                            withAnimation(.easeInOut(duration: 0.62)) {
+                                isDemoCardShowingBack = true
+                            }
+                        }
                     }
                 }
 
@@ -917,6 +940,40 @@ private struct DualProfileIntroductionView: View {
                 .padding(.bottom, 45)
             }
         }
+    }
+}
+
+private struct IntroFlippableProfileCard: View {
+    let frontProfile: ProfileCardModel
+    let backProfile: ProfileCardModel
+    @Binding var isShowingBack: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            ProfileCardView(profile: frontProfile)
+                .opacity(isShowingBack ? 0 : 1)
+                .rotation3DEffect(
+                    .degrees(isShowingBack && !reduceMotion ? 180 : 0),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.74
+                )
+
+            ProfileCardView(profile: backProfile)
+                .opacity(isShowingBack ? 1 : 0)
+                .rotation3DEffect(
+                    .degrees(isShowingBack && !reduceMotion ? 0 : -180),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.74
+                )
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
+        .onTapGesture {
+            withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeInOut(duration: 0.62)) {
+                isShowingBack.toggle()
+            }
+        }
+        .accessibilityHint("点击可翻转双面卡片")
     }
 }
 
