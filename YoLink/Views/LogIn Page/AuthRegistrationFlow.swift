@@ -84,6 +84,7 @@ struct AuthMockService: RegistrationAuthenticating {
 
 struct ProfessionalProfileDraft: Equatable {
     var name = "林知夏"
+    var birthday = Calendar.current.date(from: DateComponents(year: 2000, month: 1, day: 1)) ?? Date()
     var heroImageName = "Pcard1"
     var heroImageData: Data?
     var currentIdentity = "产品设计师"
@@ -96,7 +97,7 @@ struct ProfessionalProfileDraft: Equatable {
 struct LifestyleProfileDraft: Equatable {
     var statement = ""
     var selectedInterests: [String] = []
-    //var imageNames: [String] = ["LifePic", "Profile_R2"]
+    var imageNames: [String] = []
     var imageData: [Data] = []
 }
 
@@ -107,6 +108,8 @@ struct RegistrationProfileDraft: Equatable {
 
 enum RegistrationProfileValidator {
     static func professionalError(for draft: ProfessionalProfileDraft) -> String? {
+        if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请输入姓名" }
+        if draft.region.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请输入地区" }
         if draft.bio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请填写职业简介" }
         if draft.schoolOrCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "请输入学校" }
         if draft.selectedSkills.isEmpty { return "请至少选择一个专业领域" }
@@ -925,6 +928,7 @@ private struct ProfileCreationView: View {
 
     fileprivate enum Field: Hashable {
         case name
+        case region
         case schoolOrCompany
         case bio
         case statement
@@ -949,13 +953,13 @@ private struct ProfileCreationView: View {
                         .padding(.horizontal, 28)
                         .padding(.top, 4)
 
-                    RegistrationProgressView(currentIndex: 1)
-                        .padding(.top, 24)
-                        .padding(.bottom, 30)
+//                    RegistrationProgressView(currentIndex: 1)
+//                        .padding(.top, 24)
+//                        .padding(.bottom, 30)
 
                     VStack(spacing: 20) {
                         Text("完善档案详情")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 22, weight: .medium))
                             .foregroundColor(Color(hex: "0E0B3E"))
                             .frame(maxWidth: .infinity)
                             .padding(.bottom, viewModel.editingProfileSide == .professional ? 16 : 10)
@@ -987,6 +991,7 @@ private struct ProfileCreationView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    .padding(.top, 28)
                     .padding(.bottom, 150)
                     .animation(.spring(response: 0.34, dampingFraction: 0.9), value: viewModel.editingProfileSide)
                 }
@@ -1016,10 +1021,54 @@ private struct ProfessionalProfileEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            ProfileFieldSection(title: "基本信息") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        TextField("请输入姓名", text: $viewModel.profileDraft.professional.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "0E0B3E"))
+                            .focused(focusedField, equals: .name)
+                            .submitLabel(.next)
+
+                        Image(systemName: "person")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(hex: "86868B").opacity(0.55))
+                            .accessibilityHidden(true)
+                    }
+                    .profileGlassInputStyle()
+
+                    DatePicker(
+                        "生日",
+                        selection: $viewModel.profileDraft.professional.birthday,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(hex: "0E0B3E"))
+                    .tint(RegistrationTheme.navy)
+                    .profileGlassInputStyle()
+                    .accessibilityLabel("生日")
+
+                    HStack(spacing: 10) {
+                        TextField("请输入地区", text: $viewModel.profileDraft.professional.region)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(hex: "0E0B3E"))
+                            .focused(focusedField, equals: .region)
+                            .submitLabel(.next)
+
+                        Image(systemName: "location")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(hex: "86868B").opacity(0.55))
+                            .accessibilityHidden(true)
+                    }
+                    .profileGlassInputStyle()
+                }
+            }
+
             ProfileFieldSection(title: "职业简介") {
                 VStack(alignment: .trailing, spacing: 6) {
                     HStack(spacing: 10) {
-                        TextField("用一句话介绍你的职业方向与优势", text: $viewModel.profileDraft.professional.bio, axis: .vertical)
+                        TextField("用一句话介绍你的职业方向", text: $viewModel.profileDraft.professional.bio, axis: .vertical)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(Color(hex: "0E0B3E"))
                             .lineLimit(1...3)
@@ -1033,16 +1082,9 @@ private struct ProfessionalProfileEditor: View {
                         Image(systemName: "pencil")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(Color(hex: "86868B").opacity(0.55))
-                            .accessibilityHidden(true)
+                        .accessibilityHidden(true)
                     }
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 13)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 48, style: .continuous)
-                            .stroke(.white.opacity(0.6), lineWidth: 1)
-                    )
-                    .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+                    .profileGlassInputStyle()
 
                     Text("\(viewModel.profileDraft.professional.bio.count)/80")
                         .font(.system(size: 12, weight: .medium))
@@ -1064,16 +1106,9 @@ private struct ProfessionalProfileEditor: View {
                         Image(systemName: "graduationcap")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(Color(hex: "86868B").opacity(0.55))
-                            .accessibilityHidden(true)
+                        .accessibilityHidden(true)
                     }
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 13)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 48, style: .continuous)
-                            .stroke(.white.opacity(0.6), lineWidth: 1)
-                    )
-                    .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+                    .profileGlassInputStyle()
 
                     if !viewModel.profileDraft.professional.schoolOrCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ProfileTag(
@@ -1273,12 +1308,6 @@ private struct LifestyleProfileEditor: View {
                     }
                 }
 
-                Text("* 照片将以 Liquid Glass 风格卡片展示在你的主页。")
-                    .font(.system(size: 12, weight: .medium).italic())
-                    .tracking(0.6)
-                    .foregroundColor(Color(hex: "86868B"))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 8)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1301,69 +1330,63 @@ private struct ProfilePreviewView: View {
     let onBack: () -> Void
     let onCompleted: () -> Void
     @State private var isShowingLifestyle = false
+    private let designWidth: CGFloat = 440
 
     var body: some View {
-        ZStack {
-            Color(hex: "F8F9FA")
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let canvasWidth = min(proxy.size.width, designWidth)
+            let scale = canvasWidth / designWidth
+            let horizontalPadding = 26 * scale
+            let contentWidth = canvasWidth - horizontalPadding * 2
 
-            VStack(spacing: 0) {
-                HStack {
-                    RegistrationTopButton(kind: .back, action: onBack)
-                    Spacer()
-                }
-                .padding(.top, 48)
-                .padding(.horizontal, 20)
+            ZStack {
+                Color.white
+                    .ignoresSafeArea()
 
-                RegistrationEditorialHeadline()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 28)
-                    .padding(.top, 4)
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .center, spacing: 0) {
+                        HStack {
+                            RegistrationTopButton(kind: .back, action: onBack)
+                            Spacer()
+                        }
+                        .padding(.bottom, 18 * scale)
 
-                RegistrationProgressView(currentIndex: 2)
-                    .padding(.top, 24)
+                        RegistrationFlippableProfileCard(
+                            draft: viewModel.profileDraft,
+                            isShowingLifestyle: $isShowingLifestyle
+                        )
+                        .frame(width: contentWidth)
+                        .accessibilityAction(named: "翻转卡片") {
+                            isShowingLifestyle.toggle()
+                        }
 
-                Text("预览我的卡片")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(hex: "0E0B3E"))
-                    .padding(.top, 24)
+//                        Text("左右滑动 · 切换职业面与生活面")
+//                            .font(.system(size: 12, weight: .medium))
+//                            .tracking(0.6)
+//                            .foregroundColor(Color(hex: "191C1D").opacity(0.38))
+//                            .padding(.top, 18 * scale)
 
-                Text("这是别人看到你的样子，之后仍可以随时修改")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color(hex: "757D8C"))
-                    .padding(.top, 8)
-
-                RegistrationFlippableProfileCard(
-                    frontProfile: viewModel.previewProfileCard,
-                    lifestyleDraft: viewModel.profileDraft.lifestyle,
-                    isShowingLifestyle: $isShowingLifestyle
-                )
-                .frame(width: 296, height: 493)
-                .padding(.top, 28)
-                .accessibilityAction(named: "翻转卡片") {
-                    isShowingLifestyle.toggle()
-                }
-
-                Text(isShowingLifestyle ? "生活面" : "职业面")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(RegistrationTheme.navy.opacity(0.65))
-                    .padding(.top, 14)
-
-                Spacer(minLength: 24)
-
-                VStack(spacing: 12) {
-                    GlassPrimaryButton(title: "完成并进入 YoLink", isEnabled: true) {
-                        onCompleted()
+                        VStack(spacing: 12) {
+                            GlassPrimaryButton(title: "完成并进入 YoLink", isEnabled: true) {
+                                onCompleted()
+                            }
+                            Button("返回修改") {
+                                onBack()
+                            }
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(RegistrationTheme.navy)
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.top, 26 * scale)
+                        .padding(.bottom, 34)
                     }
-                    Button("返回修改") {
-                        onBack()
-                    }
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(RegistrationTheme.navy)
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, 39 * scale)
+                    .padding(.bottom, 0)
+                    .frame(width: canvasWidth, alignment: .bottom)
+                    .background(.white)
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 34)
             }
         }
     }
@@ -1717,44 +1740,50 @@ private struct LifestylePhotoGrid: View {
 
     @ViewBuilder
     private func photoTile(at index: Int) -> some View {
-        ZStack(alignment: .topTrailing) {
-            if let image = uiImage(at: index) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let imageName = imageName(at: index) {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                emptyPhoto
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(.white.opacity(0.30), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(index == 0 ? 0.12 : 0.04), radius: index == 0 ? 15 : 6, x: 0, y: index == 0 ? 10 : 3)
-        .overlay(alignment: .topLeading) {
-            if hasPhoto(at: index) {
-                Button {
-                    onDelete(index)
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(RegistrationTheme.navy)
-                        .frame(width: 28, height: 28)
-                        .background(.ultraThinMaterial, in: Circle())
+        GeometryReader { tileProxy in
+            ZStack(alignment: .topTrailing) {
+                if let image = uiImage(at: index) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: tileProxy.size.width, height: tileProxy.size.height)
+                        .clipped()
+                } else if let imageName = imageName(at: index) {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: tileProxy.size.width, height: tileProxy.size.height)
+                        .clipped()
+                } else {
+                    emptyPhoto
+                        .frame(width: tileProxy.size.width, height: tileProxy.size.height)
                 }
-                .buttonStyle(.plain)
-                .padding(8)
-                .accessibilityLabel("删除第 \(index + 1) 张生活照片")
             }
+            .frame(width: tileProxy.size.width, height: tileProxy.size.height)
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .stroke(.white.opacity(0.30), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(index == 0 ? 0.12 : 0.04), radius: index == 0 ? 15 : 6, x: 0, y: index == 0 ? 10 : 3)
+            .overlay(alignment: .topLeading) {
+                if hasPhoto(at: index) {
+                    Button {
+                        onDelete(index)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(RegistrationTheme.navy)
+                            .frame(width: 28, height: 28)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(8)
+                    .accessibilityLabel("删除第 \(index + 1) 张生活照片")
+                }
+            }
+            .accessibilityLabel(hasPhoto(at: index) ? "生活照片 \(index + 1)" : "生活照片占位")
         }
-        .accessibilityLabel(hasPhoto(at: index) ? "生活照片 \(index + 1)" : "生活照片占位")
     }
 
     private var addTile: some View {
@@ -1930,6 +1959,20 @@ private struct ProfileFieldSection<Content: View>: View {
     }
 }
 
+private extension View {
+    func profileGlassInputStyle() -> some View {
+        self
+            .padding(.horizontal, 13)
+            .padding(.vertical, 13)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 48, style: .continuous)
+                    .stroke(.white.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: RegistrationTheme.navy.opacity(0.05), radius: 20, x: 0, y: 4)
+    }
+}
+
 private struct UnderlineTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -2001,13 +2044,13 @@ private struct RegistrationBottomActionBar: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color(hex: "0E0B3E"), in: Capsule())
+                .background(Color(hex: "08062D"), in: Capsule())
                 .overlay(
                     Capsule()
-                        .stroke(.white.opacity(0.10), lineWidth: 1)
+                        .stroke(.white.opacity(0.20), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.10), radius: 15, x: 0, y: 10)
-                .shadow(color: .black.opacity(0.10), radius: 6, x: 0, y: 4)
+                .shadow(color: Color(hex: "08062D").opacity(0.26), radius: 18, x: 0, y: 12)
+                .shadow(color: Color(hex: "08062D").opacity(0.18), radius: 7, x: 0, y: 4)
             }
             .buttonStyle(LiquidGlassPressButtonStyle(isEnabled: true))
             .accessibilityLabel("预览我的卡片")
@@ -2043,76 +2086,483 @@ private struct PhotoOverlayButton: View {
 }
 
 private struct RegistrationFlippableProfileCard: View {
-    let frontProfile: ProfileCardModel
-    let lifestyleDraft: LifestyleProfileDraft
+    let draft: RegistrationProfileDraft
     @Binding var isShowingLifestyle: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @GestureState private var dragTranslation: CGFloat = 0
 
     var body: some View {
         ZStack {
-            ProfileCardView(profile: frontProfile)
+            FinalProfessionalProfileCard(draft: draft.professional)
                 .opacity(isShowingLifestyle ? 0 : 1)
-                .rotation3DEffect(.degrees(isShowingLifestyle && !reduceMotion ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+                .rotation3DEffect(
+                    .degrees(isShowingLifestyle && !reduceMotion ? 180 : 0),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.72
+                )
 
-            LifestyleCardBack(draft: lifestyleDraft)
+            FinalLifestyleProfileCard(draft: draft.lifestyle, name: draft.professional.name)
                 .opacity(isShowingLifestyle ? 1 : 0)
-                .rotation3DEffect(.degrees(isShowingLifestyle && !reduceMotion ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+                .rotation3DEffect(
+                    .degrees(isShowingLifestyle && !reduceMotion ? 0 : -180),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.72
+                )
         }
+        .frame(height: isShowingLifestyle ? 1350 : 1100)
+        .rotation3DEffect(
+            .degrees(reduceMotion ? 0 : Double(dragTranslation / 18)),
+            axis: (x: 0, y: 1, z: 0),
+            perspective: 0.9
+        )
         .animation(reduceMotion ? .easeInOut(duration: 0.18) : .easeInOut(duration: 0.58), value: isShowingLifestyle)
-        .onTapGesture {
-            isShowingLifestyle.toggle()
-        }
+        .gesture(flipGesture)
         .accessibilityLabel(isShowingLifestyle ? "生活面预览卡片" : "职业面预览卡片")
-        .accessibilityHint("轻点翻转卡片")
+        .accessibilityHint("左右滑动可切换职业面和生活面")
+    }
+
+    private var flipGesture: some Gesture {
+        DragGesture(minimumDistance: 18, coordinateSpace: .local)
+            .updating($dragTranslation) { value, state, _ in
+                state = value.translation.width
+            }
+            .onEnded { value in
+                guard abs(value.translation.width) > 64 else { return }
+                withAnimation(reduceMotion ? .easeInOut(duration: 0.18) : .easeInOut(duration: 0.58)) {
+                    isShowingLifestyle.toggle()
+                }
+            }
     }
 }
 
-private struct LifestyleCardBack: View {
-    let draft: LifestyleProfileDraft
+private struct FinalProfessionalProfileCard: View {
+    let draft: ProfessionalProfileDraft
+
+    private var skills: [String] {
+        Array((draft.selectedSkills.isEmpty ? ["产品设计"] : draft.selectedSkills).prefix(5))
+    }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 40, style: .continuous)
-                .fill(.white.opacity(0.72))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 40, style: .continuous)
-                        .stroke(Color(hex: "EEEEEE"), lineWidth: 1)
-                )
-                .shadow(color: Color(hex: "15201E").opacity(0.05), radius: 35, x: 0, y: 16)
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 35, style: .continuous)
+                    .fill(.white.opacity(0.60))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 35, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 35, style: .continuous)
+                            .stroke(RegistrationTheme.navy.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.08), radius: 40, x: 0, y: 10)
 
+                VStack(spacing: 0) {
+                    FinalCardHeroImage(
+                        imageData: draft.heroImageData,
+                        fallbackImageName: draft.heroImageName,
+                        height: 464,
+                        cornerRadius: 35
+                    ) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 8) {
+                                Text(draft.name.isEmpty ? "我的名片" : draft.name)
+                                    .font(.system(size: 24, weight: .medium))
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(Color(hex: "3BA7FF"))
+                            }
+                            Text(draft.currentIdentity.isEmpty ? "YoLink 用户" : draft.currentIdentity)
+                                .font(.system(size: 14, weight: .medium))
+                                .tracking(0.28)
+                                .opacity(0.9)
+                            Text(draft.bio.isEmpty ? "打造平衡实用与美感的数字体验。" : draft.bio)
+                                .font(.system(size: 12, weight: .medium))
+                                .tracking(0.6)
+                                .lineLimit(2)
+                                .opacity(0.82)
+                        }
+
+                        Spacer()
+
+                        FinalConnectButton(style: .navy)
+                    }
+
+                    FinalStatsRow(items: [
+                        ("briefcase", "\(max(skills.count, 1)) 项领域"),
+                        ("location", draft.region.isEmpty ? "当前位置" : draft.region)
+                    ])
+
+                    FinalInfoRow(
+                        icon: "graduationcap",
+                        title: draft.schoolOrCompany.isEmpty ? "学校" : draft.schoolOrCompany,
+                        subtitle: draft.currentIdentity.isEmpty ? "职业方向" : draft.currentIdentity
+                    )
+
+                    FinalCardSection(title: "核心专业领域") {
+                        FinalCompactTagFlow(items: skills, foreground: .white, background: RegistrationTheme.navy)
+                    }
+                    .padding(.top, 32)
+
+                    FinalCardSection(title: "最近动态", trailing: "查看全部") {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                            FinalMomentTile(imageName: "CardBG1", title: "设计系统实践", subtitle: "案例研究 · 2024")
+                            FinalMomentTile(imageName: "CardBG2", title: "AI 的未来", subtitle: "研究 · 2023")
+                            FinalMomentTile(imageName: "ProfessionalPic", title: "工作空间", subtitle: "项目记录 · 2023")
+                            FinalMomentTile(imageName: "CardBG3", title: "互联世界", subtitle: "品牌标识 · 2022")
+                        }
+                    }
+                    .padding(.top, 32)
+                    .padding(.bottom, 64)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 35, style: .continuous))
+            }
+            .frame(height: 1040)
+
+//            FinalFlipHint(text: "切换至生活视角", systemName: "chevron.right")
+                .padding(.top, 32)
+        }
+    }
+}
+
+private struct FinalLifestyleProfileCard: View {
+    let draft: LifestyleProfileDraft
+    let name: String
+
+    private var interests: [String] {
+        Array((draft.selectedInterests.isEmpty ? ["摄影", "咖啡", "徒步", "独立音乐"] : draft.selectedInterests).prefix(6))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 48, style: .continuous)
+                    .fill(.white.opacity(0.60))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 48, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 48, style: .continuous)
+                            .stroke(RegistrationTheme.navy.opacity(0.08), lineWidth: 1)
+                    )
+                    .shadow(color: RegistrationTheme.navy.opacity(0.06), radius: 34, x: 0, y: 14)
+
+                VStack(spacing: 0) {
+                    FinalCardHeroImage(
+                        imageData: draft.imageData.first,
+                        fallbackImageName: draft.imageNames.first ?? "LifePic",
+                        height: 466,
+                        cornerRadius: 48
+                    ) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 8) {
+                                Text(name.isEmpty ? "我的生活面" : name)
+                                    .font(.system(size: 24, weight: .medium))
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(RegistrationTheme.yellow)
+                            }
+                            Text(draft.statement.isEmpty ? "总在寻找下一家好喝的咖啡馆。" : draft.statement)
+                                .font(.system(size: 16, weight: .medium))
+                                .lineLimit(2)
+                                .opacity(0.92)
+                        }
+
+                        Spacer()
+
+                        FinalConnectButton(style: .yellow)
+                    }
+
+                    FinalStatsRow(items: [
+                        ("heart", "1.2k 点赞"),
+                        ("location", "我的生活")
+                    ])
+
+                    FinalCardSection(title: "热爱") {
+                        FinalCompactTagFlow(items: interests, foreground: Color(hex: "191C1D"), background: .clear)
+                    }
+                    .padding(.top, 32)
+
+                    FinalCardSection(title: "生活瞬间") {
+                        VStack(spacing: 12) {
+                            FinalLifestylePhotoTile(data: draft.imageData[safe: 0], imageName: draft.imageNames[safe: 0] ?? "LifePic", height: 190)
+                            FinalLifestylePhotoTile(data: draft.imageData[safe: 1], imageName: draft.imageNames[safe: 1] ?? "life2", height: 230)
+                            FinalLifestylePhotoTile(data: draft.imageData[safe: 2], imageName: draft.imageNames[safe: 2] ?? "life3", height: 230)
+                        }
+                    }
+                    .padding(.top, 32)
+                    .padding(.bottom, 64)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 48, style: .continuous))
+            }
+            .frame(height: 1290)
+
+            //FinalFlipHint(text: "切换至职业视角", systemName: "chevron.left")
+                .padding(.top, 32)
+        }
+    }
+}
+
+private enum FinalConnectButtonStyle {
+    case navy
+    case yellow
+}
+
+private struct FinalConnectButton: View {
+    let style: FinalConnectButtonStyle
+
+    var body: some View {
+        Text("建立\n联系")
+            .font(.system(size: 14, weight: .medium))
+            .tracking(0.28)
+            .multilineTextAlignment(.center)
+            .foregroundColor(style == .navy ? .white : Color(hex: "0E0B3E"))
+            .lineLimit(2)
+            .frame(width: 116, height: 50)
+            .background(style == .navy ? Color(hex: "0E0B3E") : Color(hex: "FDD434"), in: Capsule())
+            .shadow(color: .black.opacity(0.12), radius: 15, x: 0, y: 10)
+    }
+}
+
+private struct FinalCardHeroImage<Overlay: View>: View {
+    let imageData: Data?
+    let fallbackImageName: String
+    let height: CGFloat
+    let cornerRadius: CGFloat
+    @ViewBuilder let overlay: Overlay
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            FinalProfileImage(data: imageData, imageName: fallbackImageName)
+                .frame(height: height)
+                .clipped()
 
             LinearGradient(
-                colors: [.clear, Color(hex: "FFF7D1").opacity(0.96)],
+                stops: [
+                    .init(color: .black.opacity(0.0), location: 0.20),
+                    .init(color: .black.opacity(0.30), location: 0.55),
+                    .init(color: .black.opacity(0.70), location: 1.0)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 14) {
-                Text("生活面")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(RegistrationTheme.navy)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(RegistrationTheme.yellow, in: Capsule())
+            HStack(alignment: .bottom, spacing: 16) {
+                overlay
+            }
+            .foregroundColor(.white)
+            .padding(32)
+        }
+        .frame(height: height)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: cornerRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: cornerRadius,
+                style: .continuous
+            )
+        )
+    }
+}
 
-                Text(draft.statement.isEmpty ? "保持好奇，认真生活。" : draft.statement)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(RegistrationTheme.navy)
-                    .lineLimit(3)
+private struct FinalProfileImage: View {
+    let data: Data?
+    let imageName: String
 
-                FlowTagLayout(items: draft.selectedInterests.isEmpty ? ["摄影", "咖啡"] : draft.selectedInterests) { interest in
-                    Text(interest)
-                        .font(.system(size: 13, weight: .bold))
+    var body: some View {
+        Group {
+            if let data, let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct FinalStatsRow: View {
+    let items: [(String, String)]
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ForEach(items, id: \.1) { item in
+                HStack(spacing: 4) {
+                    Image(systemName: item.0)
+                        .font(.system(size: 12, weight: .medium))
+                    Text(item.1)
+                        .font(.system(size: 12, weight: .medium))
+                        .tracking(0.6)
+                }
+                .foregroundColor(Color(hex: "0E0B3E"))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 16)
+        .background(.white.opacity(0.40))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(RegistrationTheme.navy.opacity(0.10))
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct FinalInfoRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: "EDEEEF"))
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(RegistrationTheme.navy)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.white.opacity(0.62), in: Capsule())
+                )
+                .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(hex: "191C1D"))
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .tracking(0.6)
+                    .foregroundColor(Color(hex: "86868B"))
+                    .lineLimit(1)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 16)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(RegistrationTheme.navy.opacity(0.10))
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct FinalCardSection<Content: View>: View {
+    let title: String
+    var trailing: String?
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .tracking(1.4)
+                    .foregroundColor(Color(hex: "86868B"))
+                Spacer()
+                if let trailing {
+                    Text(trailing)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(hex: "0E0B3E"))
                 }
             }
-            .padding(28)
+
+            content
         }
-        .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
+        .padding(.horizontal, 32)
+    }
+}
+
+private struct FinalCompactTagFlow: View {
+    let items: [String]
+    let foreground: Color
+    let background: Color
+
+    var body: some View {
+        TagFlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+            ForEach(items, id: \.self) { item in
+                Text(item)
+                    .font(.system(size: 14, weight: .medium))
+                    .tracking(0.28)
+                    .foregroundColor(foreground)
+                    .padding(.horizontal, 16)
+                    .frame(height: 32)
+                    .background(background == .clear ? Color.clear : background, in: Capsule())
+            }
+        }
+    }
+}
+
+private struct FinalMomentTile: View {
+    let imageName: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+                .frame(height: 134)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .stroke(RegistrationTheme.navy.opacity(0.10), lineWidth: 1)
+                )
+
+            Text(title)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color(hex: "191C1D"))
+                .lineLimit(1)
+                .padding(.top, 8)
+            Text(subtitle)
+                .font(.system(size: 10, weight: .regular))
+                .foregroundColor(Color(hex: "86868B"))
+                .lineLimit(1)
+        }
+    }
+}
+
+private struct FinalLifestylePhotoTile: View {
+    let data: Data?
+    let imageName: String
+    let height: CGFloat
+
+    var body: some View {
+        FinalProfileImage(data: data, imageName: imageName)
+            .frame(height: height)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .stroke(RegistrationTheme.navy.opacity(0.10), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+private struct FinalFlipHint: View {
+    let text: String
+    let systemName: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: systemName)
+                .font(.system(size: 12, weight: .medium))
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .tracking(0.6)
+        }
+        .foregroundColor(Color(hex: "191C1D").opacity(0.40))
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 
@@ -2441,14 +2891,14 @@ private struct GlassPrimaryButton: View {
     private var buttonMaterial: some View {
         if reduceTransparency {
             buttonShape
-                .fill(isEnabled ? background.opacity(0.86) : RegistrationTheme.navy.opacity(0.42))
+                .fill(isEnabled ? background.opacity(0.94) : RegistrationTheme.navy.opacity(0.58))
                 .overlay(surfaceTint)
         } else if #available(iOS 26.0, *) {
             buttonShape
                 .fill(.clear)
                 .glassEffect(
                     .regular
-                        .tint((isEnabled ? background : RegistrationTheme.navy).opacity(isEnabled ? 0.28 : 0.22))
+                        .tint((isEnabled ? background : RegistrationTheme.navy).opacity(isEnabled ? 0.48 : 0.34))
                         .interactive(isEnabled),
                     in: buttonShape
                 )
@@ -2462,13 +2912,13 @@ private struct GlassPrimaryButton: View {
 
     private var surfaceTint: some View {
         buttonShape
-            .fill(isEnabled ? background.opacity(0.46) : RegistrationTheme.navy.opacity(0.36))
+            .fill(isEnabled ? background.opacity(0.72) : RegistrationTheme.navy.opacity(0.52))
             .overlay(
                 LinearGradient(
                     colors: [
-                        .white.opacity(isEnabled ? 0.28 : 0.18),
+                        .white.opacity(isEnabled ? 0.22 : 0.14),
                         .white.opacity(0.04),
-                        RegistrationTheme.navy.opacity(isEnabled ? 0.18 : 0.22)
+                        RegistrationTheme.navy.opacity(isEnabled ? 0.28 : 0.30)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -2631,8 +3081,8 @@ private extension Color {
 #Preview("职业面缺少必填项") {
     let viewModel: RegistrationViewModel = {
         let viewModel = RegistrationViewModel.preview(step: .profileCreation, phoneVerified: true, credentialsCompleted: true)
-        viewModel.profileDraft.professional.name = ""
-        viewModel.profileCreationError = "请输入姓名"
+        viewModel.profileDraft.professional.bio = ""
+        viewModel.profileCreationError = "请填写职业简介"
         return viewModel
     }()
     ProfileCreationView(viewModel: viewModel, onBack: {})
@@ -2662,19 +3112,28 @@ private extension Color {
 }
 
 #Preview("完整卡片预览生活面") {
+    let draft: RegistrationProfileDraft = {
+        var draft = RegistrationProfileDraft()
+        draft.professional.name = "陈苏菲"
+        draft.professional.currentIdentity = "YoLink 资深产品设计师"
+        draft.professional.schoolOrCompany = "斯坦福大学"
+        draft.professional.region = "加州 旧金山"
+        draft.professional.bio = "打造平衡实用与美感的数字体验。专注于简化复杂系统。"
+        draft.professional.selectedSkills = ["产品设计", "AI/机器学习设计", "策略", "原型制作", "用户研究"]
+        draft.lifestyle.statement = "总在寻找下一家好喝的咖啡馆。"
+        draft.lifestyle.selectedInterests = ["摄影", "咖啡", "徒步", "独立音乐"]
+        return draft
+    }()
+
     RegistrationFlippableProfileCard(
-        frontProfile: ProfileCardMockData.cards[0],
-        lifestyleDraft: {
-            var draft = LifestyleProfileDraft()
-            draft.statement = "总在寻找下一家好喝的咖啡馆。"
-            draft.selectedInterests = ["摄影", "咖啡", "徒步"]
-            return draft
-        }(),
+        draft: draft,
         isShowingLifestyle: .constant(true)
     )
-    .frame(width: 296, height: 493)
-    .padding()
-    .background(Color(hex: "F8F9FA"))
+    .padding(.horizontal, 26)
+    .padding(.top, 39)
+    .padding(.bottom, 0)
+    .frame(width: 440, alignment: .bottom)
+    .background(.white)
 }
 
 private extension RegistrationViewModel {
